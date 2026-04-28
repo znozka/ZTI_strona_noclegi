@@ -1,0 +1,18 @@
+:root {
+    --main-accent: #FF5A5F;
+    --card-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stButton>button {
+    border-radius: 8px;
+    background-color: var(--main-accent);
+}
+
+/* Styl dla karty noclegu */
+.accommodation-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 20px;
+}
