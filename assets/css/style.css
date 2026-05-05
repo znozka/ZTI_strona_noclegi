@@ -1,18 +1,96 @@
 :root {
-    --main-accent: #FF5A5F;
-    --card-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --main-accent: #EAB308;
+    --page-bg: #F8FAFC;
+    --page-text: #0F172A;
+    --page-border: rgba(0, 0, 0, 0.08);
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --header-height: 72px;
 }
 
+/* Ukrywanie systemowego menu z lewej */
+[data-testid="stHeader"], 
+[data-testid="stSidebar"], 
+[data-testid="stToolbar"],
+footer {
+    display: none !important;
+}
+
+/* Przyciski */
 .stButton>button {
+    background-color: var(--main-accent) !important;
+    color: white !important;
+    border: none !important;
     border-radius: 8px;
-    background-color: var(--main-accent);
+    padding: 0.5rem 1rem;
+    transition: opacity 0.2s;
 }
 
-/* Styl dla karty noclegu */
+.stButton>button:hover {
+    opacity: 0.9;
+    color: white !important;
+}
+
+/* Globalne usuwanie podkreśleń dla linków */
+a, .page-nav-link, .page-action-button, .temp-links a {
+    text-decoration: none !important;
+    outline: none !important;
+}
+
+/* Główny kontener */
+.block-container {
+    background: var(--page-bg);
+    color: var(--page-text);
+    padding-top: var(--header-height);
+}
+
+/* Header (menu górne) */
+.page-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--page-bg);
+    border-bottom: 1px solid var(--page-border);
+    z-index: 99999;
+}
+
+/* Linki w menu */
+.page-nav-link {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--main-accent) !important;
+}
+
+/* Przycisk akcji */
+.page-action-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    background-color: var(--main-accent) !important;
+    color: white !important;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Tymczasowe linki */
+.temp-links a {
+    padding: 0.75rem 1.2rem;
+    background-color: var(--main-accent) !important;
+    color: white !important;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+/* Karty noclegów */
 .accommodation-card {
-    border: 1px solid #ddd;
+    border: 1px solid var(--page-border);
     padding: 15px;
-    border-radius: 12px;
+    border-radius: 10px;
+    background: white;
     box-shadow: var(--card-shadow);
     margin-bottom: 20px;
 }
