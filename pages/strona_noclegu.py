@@ -57,7 +57,7 @@ with search_container:
         osoby_input = st.number_input("Liczba osób", min_value=1, max_value=20, value=st.session_state.search_osoby, key="details_osoby")
     with c5:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Szukaj", use_container_width=True, type="primary", key="details_search_btn"):
+        if st.button("Szukaj", width='stretch', type="primary", key="details_search_btn"):
             st.session_state.search_clicked = True
             st.session_state.search_miejsce = miejsce_input
             st.session_state.search_osoby = osoby_input
@@ -70,7 +70,7 @@ selected_id = st.session_state.get("selected_nocleg_id", None)
 
 if selected_id is None:
     st.warning("Nie wybrano żadnego noclegu. Powróć do wyników wyszukiwania.")
-    if st.button("Powrót do wyszukiwarki"):
+    if st.button("Powrót do wyszukiwarki", width='stretch'):
         st.switch_page("pages/wyniki_wyszukiwania.py")
 else:
     try:
@@ -124,7 +124,7 @@ else:
                 # Funkcja pomocnicza do renderowania zdjęcia lub szarego tła
                 def render_photo(url):
                     if url:
-                        st.image(url, use_container_width=True)
+                        st.image(url, width='stretch')
                     else:
                         st.markdown(
                             "<div style='background-color: #E2E8F0; width:100%; height:140px; border-radius: 5px; margin-bottom:10px;'></div>", 
@@ -138,7 +138,7 @@ else:
                 with img_row_1[0]:
                     # Duże zdjęcie po lewej stronie
                     if lista_zdjec[0]:
-                        st.image(lista_zdjec[0], use_container_width=True)
+                        st.image(lista_zdjec[0], width='stretch')
                     else:
                         st.markdown(
                             "<div style='background-color: #E2E8F0; width:100%; height:295px; border-radius: 5px;'></div>", 

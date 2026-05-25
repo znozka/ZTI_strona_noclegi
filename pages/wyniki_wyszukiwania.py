@@ -46,7 +46,7 @@ with search_container:
     with c5:
         # Wyrównanie przycisku do linii z inputami
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Szukaj", use_container_width=True, type="primary"):
+        if st.button("Szukaj", width='stretch', type="primary"):
             st.session_state.search_clicked = True
             st.session_state.search_miejsce = miejsce_input
             st.session_state.search_osoby = osoby_input
@@ -156,7 +156,7 @@ else:
         
         # Przycisk powrotu do ekranu głównego
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Wyczyść wyniki wyszukiwania", use_container_width=True):
+        if st.button("Wyczyść wyniki wyszukiwania", width='stretch'):
             st.session_state.search_clicked = False
             st.session_state.search_miejsce = ""
             st.rerun()
