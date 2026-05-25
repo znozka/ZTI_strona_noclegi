@@ -29,8 +29,8 @@ CREATE TABLE noclegi (
     cena_za_noc DECIMAL(10,2) NOT NULL,
     maks_liczba_osob INT NOT NULL,
     data_dodania DATETIME DEFAULT GETDATE(),
-    srednia_ocena DECIMAL(3,2) DEFAULT 0.00, -- Poprawka 5: Zapewnia błyskawiczne sortowanie ofert
-    liczba_opinii INT DEFAULT 0,             -- Poprawka 5: Brak konieczności ciągłego używania COUNT()
+    srednia_ocena DECIMAL(3,2) DEFAULT 0.00, 
+    liczba_opinii INT DEFAULT 0,             
     CONSTRAINT FK_noclegi_uzytkownicy FOREIGN KEY (id_wlasciciela) REFERENCES uzytkownicy(id_uzytkownika) ON DELETE CASCADE
 );
 
@@ -122,8 +122,8 @@ CREATE TABLE opinie (
     ocena INT NOT NULL CHECK (ocena BETWEEN 1 AND 5),
     komentarz NVARCHAR(MAX),
     data_dodania DATETIME DEFAULT GETDATE(),
-    data_modyfikacji DATETIME NULL,           -- Poprawka: ślad czasowy po edycji opinni
-    czy_edytowana BIT DEFAULT 0,              -- Poprawka: flaga informująca o modyfikacji
+    data_modyfikacji DATETIME NULL,           
+    czy_edytowana BIT DEFAULT 0,              
     CONSTRAINT FK_opinie_rezerwacje FOREIGN KEY (id_rezerwacji) REFERENCES rezerwacje(id_rezerwacji),
     CONSTRAINT FK_opinie_turysta FOREIGN KEY (id_turysty) REFERENCES uzytkownicy(id_uzytkownika),
     CONSTRAINT FK_opinie_noclegi FOREIGN KEY (id_noclegu) REFERENCES noclegi(id_noclegu)

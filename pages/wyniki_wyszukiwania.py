@@ -137,8 +137,9 @@ else:
         st.write("**Rodzaj noclegu**")
         f_hotel = st.checkbox("Hotel")
         f_apartament = st.checkbox("Apartament")
-        f_domek = st.checkbox("Domek")
-        f_namiot = st.checkbox("Namiot")
+        f_b_and_b = st.checkbox("B&B")
+        f_schronisko = st.checkbox("Schronisko")
+        f_wynajem = st.checkbox("Wynajem wakacyjny")
         
         st.markdown("---")
         st.write("**Parking**")
@@ -179,9 +180,10 @@ else:
         wybrane_typy = []
         if f_hotel: wybrane_typy.append('Hotel')
         if f_apartament: wybrane_typy.append('Apartament')
-        if f_domek: wybrane_typy.append('B&B')
-        if f_namiot: wybrane_typy.append('Wynajem wakacyjny')
-        
+        if f_b_and_b: wybrane_typy.append('B&B')
+        if f_schronisko: wybrane_typy.append('Schronisko')
+        if f_wynajem: wybrane_typy.append('Wynajem wakacyjny')
+
         if wybrane_typy:
             type_clauses = []
             for idx, t in enumerate(wybrane_typy):

@@ -1,0 +1,34 @@
+schemat plików projektu
+
+ZTI_STRONA_NOCLEGI/
+│
+├── .streamlit/
+│   ├── config.toml
+│   └── secrets.toml
+│
+├── assets/
+│   └── css/
+│       └── style.css 
+│
+├── pages/
+│   ├── konto.py
+│   ├── login.py 
+│   ├── rejestracja.py 
+│   ├── strona_noclegu.py
+│   ├── testy_api.py
+│   └── wyniki_wyszukiwania.py 
+│
+├── src/
+│   ├── __pycache__/
+│   ├── database.py
+│   └── ui.py 
+│
+├── zdj/
+├── .gitignore
+├── app.py
+├── environment.yml
+├── db_fixer.py - plik, którym naprawiam braki/ błędy w bazie 
+├── reset_bazy - usunęłam to co było w bazie początkowej i dodałam nasze tabele 
+├── test_api_nocleg -  pobranie danych z api i przekazanie ich do naszej bazy 
+└── README.md
+
