@@ -6,3 +6,7 @@ dependencies:
   - pip
   - pip:
       - streamlit==1.56.0
+      - bcrypt==4.2.1
+      - requests
+      - sqlalchemy
+      - pyodbc

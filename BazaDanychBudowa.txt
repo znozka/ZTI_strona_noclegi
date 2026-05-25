@@ -1,0 +1,188 @@
+-- =========================================================================
+-- 1. TABELA: UZYTKOWNICY
+-- =========================================================================
+CREATE TABLE uzytkownicy (
+    id_uzytkownika INT IDENTITY(1,1) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    haslo_hash VARCHAR(255) NOT NULL,
+    imie NVARCHAR(100) NOT NULL,
+    nazwisko NVARCHAR(100) NOT NULL,
+    telefon VARCHAR(20),
+    rola VARCHAR(30) NOT NULL DEFAULT 'turysta',
+    data_rejestracji DATETIME DEFAULT GETDATE(),
+    CONSTRAINT CHK_Rola CHECK (rola IN ('turysta', 'właściciel', 'admin'))
+);
+
+-- =========================================================================
+-- 2. TABELA: NOCLEGI (z kolumnami denormalizacyjnymi dla wydajności)
+-- =========================================================================
+CREATE TABLE noclegi (
+    id_noclegu INT IDENTITY(1,1) PRIMARY KEY,
+    id_wlasciciela INT NOT NULL,
+    nazwa NVARCHAR(255) NOT NULL,
+    opis NVARCHAR(MAX),
+    typ_obiektu NVARCHAR(100) NOT NULL,
+    lokalizacja_miasto NVARCHAR(150) NOT NULL,
+    lokalizacja_adres NVARCHAR(255) NOT NULL,
+    szerokosc_geo DECIMAL(9,6),
+    dlugosc_geo DECIMAL(9,6),
+    cena_za_noc DECIMAL(10,2) NOT NULL,
+    maks_liczba_osob INT NOT NULL,
+    data_dodania DATETIME DEFAULT GETDATE(),
+    srednia_ocena DECIMAL(3,2) DEFAULT 0.00, 
+    liczba_opinii INT DEFAULT 0,             
+    CONSTRAINT FK_noclegi_uzytkownicy FOREIGN KEY (id_wlasciciela) REFERENCES uzytkownicy(id_uzytkownika) ON DELETE CASCADE
+);
+
+-- =========================================================================
+-- 3. TABELA: UDOGODNIENIA
+-- =========================================================================
+CREATE TABLE udogodnienia (
+    id_udogodnienia INT IDENTITY(1,1) PRIMARY KEY,
+    nazwa NVARCHAR(100) UNIQUE NOT NULL
+);
+
+-- =========================================================================
+-- 4. TABELA ŁĄCZĄCA: NOCLEGI_UDOGODNIENIA
+-- =========================================================================
+CREATE TABLE noclegi_udogodnienia (
+    id_noclegu INT NOT NULL,
+    id_udogodnienia INT NOT NULL,
+    PRIMARY KEY (id_noclegu, id_udogodnienia),
+    CONSTRAINT FK_nu_noclegi FOREIGN KEY (id_noclegu) REFERENCES noclegi(id_noclegu) ON DELETE CASCADE,
+    CONSTRAINT FK_nu_udogodnienia FOREIGN KEY (id_udogodnienia) REFERENCES udogodnienia(id_udogodnienia) ON DELETE CASCADE
+);
+
+-- =========================================================================
+-- 5. TABELA: ZDJECIA_NOCLEGU
+-- =========================================================================
+CREATE TABLE zdjecia_noclegu (
+    id_zdjecia INT IDENTITY(1,1) PRIMARY KEY,
+    id_noclegu INT NOT NULL,
+    url_zdjecia VARCHAR(512) NOT NULL,
+    czy_glowne BIT DEFAULT 0,
+    CONSTRAINT FK_zdjecia_noclegi FOREIGN KEY (id_noclegu) REFERENCES noclegi(id_noclegu) ON DELETE CASCADE
+);
+
+-- =========================================================================
+-- 6. TABELA: KALENDARZ_DOSTEPNOSCI
+-- =========================================================================
+CREATE TABLE kalendarz_dostepnosci (
+    id_terminu INT IDENTITY(1,1) PRIMARY KEY,
+    id_noclegu INT NOT NULL,
+    data DATE NOT NULL,
+    czy_dostepny BIT DEFAULT 1,
+    cena_modyfikowana DECIMAL(10,2) NULL,
+    CONSTRAINT UQ_Nocleg_Data UNIQUE (id_noclegu, data),
+    CONSTRAINT FK_kalendarz_noclegi FOREIGN KEY (id_noclegu) REFERENCES noclegi(id_noclegu) ON DELETE CASCADE
+);
+
+-- =========================================================================
+-- 7. TABELA: REZERWACJE
+-- =========================================================================
+CREATE TABLE rezerwacje (
+    id_rezerwacji INT IDENTITY(1,1) PRIMARY KEY,
+    id_turysty INT NOT NULL,
+    id_noclegu INT NOT NULL,
+    data_zameldowania DATE NOT NULL,
+    data_wymeldowania DATE NOT NULL,
+    liczba_gosci INT NOT NULL,
+    calkowita_cena DECIMAL(10,2) NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'oczekuje_na_platnosc',
+    data_utworzenia DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_rezerwacje_turysta FOREIGN KEY (id_turysty) REFERENCES uzytkownicy(id_uzytkownika),
+    CONSTRAINT FK_rezerwacje_noclegi FOREIGN KEY (id_noclegu) REFERENCES noclegi(id_noclegu),
+    CONSTRAINT CHK_Daty CHECK (data_wymeldowania > data_zameldowania),
+    CONSTRAINT CHK_StatusRezerwacji CHECK (status IN ('oczekuje_na_platnosc', 'potwierdzona', 'anulowana', 'zakonczona'))
+);
+
+-- =========================================================================
+-- 8. TABELA: PLATNOSCI
+-- =========================================================================
+CREATE TABLE platnosci (
+    id_platnosci INT IDENTITY(1,1) PRIMARY KEY,
+    id_rezerwacji INT NOT NULL UNIQUE,
+    id_transakcji_zewnetrznej VARCHAR(255),
+    metoda_platnosci VARCHAR(50),
+    kwota DECIMAL(10,2) NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'rozpoczeta',
+    data_platnosci DATETIME,
+    CONSTRAINT FK_platnosci_rezerwacje FOREIGN KEY (id_rezerwacji) REFERENCES rezerwacje(id_rezerwacji) ON DELETE CASCADE,
+    CONSTRAINT CHK_StatusPlatnosci CHECK (status IN ('rozpoczeta', 'sukces', 'niepowodzenie'))
+);
+
+-- =========================================================================
+-- 9. TABELA: OPINIE (z obsługą edycji)
+-- =========================================================================
+CREATE TABLE opinie (
+    id_opinii INT IDENTITY(1,1) PRIMARY KEY,
+    id_rezerwacji INT NOT NULL UNIQUE,
+    id_turysty INT NOT NULL,
+    id_noclegu INT NOT NULL,
+    ocena INT NOT NULL CHECK (ocena BETWEEN 1 AND 5),
+    komentarz NVARCHAR(MAX),
+    data_dodania DATETIME DEFAULT GETDATE(),
+    data_modyfikacji DATETIME NULL,           
+    czy_edytowana BIT DEFAULT 0,              
+    CONSTRAINT FK_opinie_rezerwacje FOREIGN KEY (id_rezerwacji) REFERENCES rezerwacje(id_rezerwacji),
+    CONSTRAINT FK_opinie_turysta FOREIGN KEY (id_turysty) REFERENCES uzytkownicy(id_uzytkownika),
+    CONSTRAINT FK_opinie_noclegi FOREIGN KEY (id_noclegu) REFERENCES noclegi(id_noclegu)
+);
+
+-- =========================================================================
+-- 10. TABELA HISTORII: HISTORIA_OPINII (Archiwum dla wersji opinii)
+-- =========================================================================
+CREATE TABLE historia_opinii (
+    id_historii INT IDENTITY(1,1) PRIMARY KEY,
+    id_opinii INT NOT NULL,
+    stara_ocena INT NOT NULL,
+    stary_komentarz NVARCHAR(MAX),
+    data_archiwizacji DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_historia_opinie FOREIGN KEY (id_opinii) REFERENCES opinie(id_opinii) ON DELETE CASCADE
+);
+
+-- =========================================================================
+-- 11. TABELA: HISTORIA_WYSZUKIWAN
+-- =========================================================================
+CREATE TABLE historia_wyszukiwan (
+    id_wyszukiwania INT IDENTITY(1,1) PRIMARY KEY,
+    id_uzytkownika INT NULL,
+    fraza_lokalizacja NVARCHAR(150),
+    data_od DATE,
+    data_do DATE,
+    liczba_osob INT,
+    cena_min DECIMAL(10,2),
+    cena_max DECIMAL(10,2),
+    data_zapytania DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_historia_uzytkownicy FOREIGN KEY (id_uzytkownika) REFERENCES uzytkownicy(id_uzytkownika) ON DELETE SET NULL
+);
+
+-- =========================================================================
+-- 12. TABELA: ULUBIONE_NOCLEGI 
+-- =========================================================================
+CREATE TABLE ulubione_noclegi (
+    id_ulubionego INT IDENTITY(1,1) PRIMARY KEY,
+    id_turysty INT NOT NULL,
+    id_noclegu INT NOT NULL,
+    data_dodania DATETIME DEFAULT GETDATE(),
+    CONSTRAINT UQ_Turysta_Nocleg UNIQUE (id_turysty, id_noclegu),
+    CONSTRAINT FK_ulubione_uzytkownicy FOREIGN KEY (id_turysty) REFERENCES uzytkownicy(id_uzytkownika) ON DELETE CASCADE,
+    CONSTRAINT FK_ulubione_noclegi FOREIGN KEY (id_noclegu) REFERENCES noclegi(id_noclegu) ON DELETE NO ACTION
+);
+
+-- =========================================================================
+-- 13. TABELA: POWIADOMIENIA (E-mail, SMS, In-App)
+-- =========================================================================
+CREATE TABLE powiadomienia (
+    id_powiadomienia INT IDENTITY(1,1) PRIMARY KEY,
+    id_uzytkownika INT NOT NULL,
+    typ_kanalu VARCHAR(20) NOT NULL, 
+    tytul NVARCHAR(150) NOT NULL,
+    tresc NVARCHAR(MAX) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'do_wyslania', 
+    data_utworzenia DATETIME DEFAULT GETDATE(),
+    data_wyslania DATETIME NULL,
+    CONSTRAINT FK_powiadomienia_uzytkownicy FOREIGN KEY (id_uzytkownika) REFERENCES uzytkownicy(id_uzytkownika) ON DELETE CASCADE,
+    CONSTRAINT CHK_Kanal CHECK (typ_kanalu IN ('email', 'sms', 'in_app')),
+    CONSTRAINT CHK_StatusPowiadomienia CHECK (status IN ('do_wyslania', 'wyslane', 'blad'))
+);

@@ -94,3 +94,28 @@ a, .page-nav-link, .page-action-button, .temp-links a {
     box-shadow: var(--card-shadow);
     margin-bottom: 20px;
 }
+/* Stopka */
+.custom-footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #E5E5E5;
+    color: #0F172A;
+    text-align: center;
+    padding: 15px 0;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    z-index: 999;
+}
+.custom-footer a {
+    color: #0F172A !important;
+    text-decoration: none !important;
+    font-weight: 500;
+}
+
+.custom-footer a:hover {
+    text-decoration: underline !important;
+}
