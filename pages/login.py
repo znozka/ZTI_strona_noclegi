@@ -34,8 +34,7 @@ with cent_co:
             st.error("Proszę uzupełnić wszystkie pola.")
         else:
             user = get_user_by_email(conn, email)
-            
-            if user and check_password(haslo, user.haslo_hash):
+            if user is not None and check_password(haslo, user.haslo_hash):
                 st.session_state.user_id = user.id_uzytkownika
                 st.session_state.user_name = user.imie
                 st.session_state.user_role = user.rola

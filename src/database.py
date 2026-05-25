@@ -9,11 +9,12 @@ def get_user_by_email(conn, email):
     Zwraca obiekt wiersza (np. z polami id_uzytkownika, imie, haslo_hash, rola)
     lub None, jeśli użytkownik nie istnieje.
     """
-    query = text("""
+    # USUNIĘTO text(...) – przekazujemy czysty string
+    query = """
         SELECT id_uzytkownika, email, haslo_hash, imie, nazwisko, rola 
         FROM uzytkownicy 
         WHERE email = :email
-    """)
+    """
 
     df = conn.query(query, params={"email": email}, ttl=0)
     
