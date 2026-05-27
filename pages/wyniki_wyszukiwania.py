@@ -22,8 +22,9 @@ if "search_osoby" not in st.session_state:
     st.session_state.search_osoby = 2
 
 if not st.session_state.search_clicked:
-    user_name = st.session_state.get("user_name", "Ania")
-    st.markdown(f"### Witaj, {user_name}. Dokąd się tym razem wybierasz?")
+    # user_name = st.session_state.get("user_name", "Ania")
+    # st.markdown(f"### Witaj, {user_name}! Dokąd się tym razem wybierasz?")
+    st.markdown(f"### Witaj! Dokąd się tym razem wybierasz?")
 
 # Kontener na formularz wyszukiwania (ramka wokół wyszukiwarki)
 search_container = st.container(border=True)
@@ -61,10 +62,10 @@ if not st.session_state.search_clicked:
     
     # Lista miast do sekcji "Polecane" (Zmień nazwy lub kolejność według uznania)
     recommended_cities = [
-        {"name": "Gdańsk", "file": "zdj/Gdańsk.jpg"},
-        {"name": "Kraków", "file": "zdj/Kraków.jpg"},
-        {"name": "Warszawa", "file": "zdj/Warszawa.jpg"},
-        {"name": "Wrocław", "file": "zdj/Wrocław.jpg"}
+        {"name": "Gdańsk", "file": "assets\images\Gdańsk.jpg"},
+        {"name": "Kraków", "file": "assets\images\Kraków.jpeg"},
+        {"name": "Warszawa", "file": "assets\images\Warszawa.jpeg"},
+        {"name": "Wrocław", "file": "assets\images\Wrocław.jpg"}
     ]
     
     for i, col in enumerate(cols_recommended):
@@ -83,8 +84,8 @@ if not st.session_state.search_clicked:
     
     # Lista miast do sekcji "Nowe kierunki"
     new_cities = [
-        {"name": "Poznań", "file": "zdj/Poznań.jpg"},
-        {"name": "Łódź", "file": "zdj/Łódź.png"}
+        {"name": "Poznań", "file": "assets\images\Poznań.jpg"},
+        {"name": "Łódź", "file": "assets\images\Łódź.png"}
     ]
     
     with cols_new_dest[0]:
@@ -106,7 +107,7 @@ if not st.session_state.search_clicked:
         # Tutaj jako 7. miasto możesz opcjonalnie wstawić Katowice
         col_last_img, col_last_txt = st.columns([1, 3])
         with col_last_img:
-            st.image("zdj/Katowice.jpg", width='stretch')
+            st.image("assets\images\Katowice.jpg", width='stretch')
         with col_last_txt:
             st.markdown("<div style='padding-top: 10px;'><b>Katowice</b><br>Wyjazd udany? Podziel się swoimi wrażeniami z pobytu w województwie śląskim!</div>", unsafe_allow_html=True)
             
