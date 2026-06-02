@@ -1,6 +1,6 @@
-
 import datetime
 import streamlit as st
+import extra_streamlit_components as stx  # Potrzebne do zapisu na poziomie root
 from src.ui import render_page_header, render_page_footer
 
 # Słownik mapujący miasta na zdjęcia, które masz w assets
@@ -20,6 +20,27 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+# --- NOWOŚĆ: OBSŁUGA SESJI I CIASTECZEK NA POZIOMIE ROOT (/) ---
+
+# KROK A: Jeśli użytkownik przyszedł ze strony logowania, "upiecz" ciasteczka na poziomie głównej ścieżki (/)
+if st.session_state.get("needs_cookie_save"):
+    cookie_manager = stx.CookieManager(key="root_cookie_saver")
+    cookie_manager.set("user_id", str(st.session_state.user_id), max_age=86400, key="rc_uid")
+    cookie_manager.set("user_name", st.session_state.user_name, max_age=86400, key="rc_uname")
+    cookie_manager.set("user_role", st.session_state.user_role, max_age=86400, key="rc_urole")
+    st.session_state["needs_cookie_save"] = False  # Oznacz jako wykonane, aby nie zapętlać
+
+# KROK B: Automatyczne odbudowanie sesji z ciasteczek po naciśnięciu F5
+if "user_id" not in st.session_state:
+    cookie_uid = st.context.cookies.get("user_id")
+    if cookie_uid:
+        st.session_state.user_id = cookie_uid
+        st.session_state.user_name = st.context.cookies.get("user_name")
+        st.session_state.user_role = st.context.cookies.get("user_role")
+        st.rerun()  # Przeładuj raz, aby UI od razu zobaczyło zalogowanego użytkownika
+
+# ---------------------------------------------------------------
 
 render_page_header()
 
@@ -47,7 +68,7 @@ else:
 
 st.title("Witaj w InnSight")
 if st.session_state.get("user_name"):
-    st.markdown(f"### Witaj {st.session_state.user_name}! Dokąd wybierasz się tym razem?")
+    st.markdown(f"### Witaj, {st.session_state.user_name}! Dokąd wybierasz się tym razem?")
 else:
     st.markdown("### Witaj! Dokąd wybierasz się tym razem?")
 
@@ -148,15 +169,15 @@ with cols_new_dest[1]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Pokazuj sekcję z ostatnim wyjazdem tylko wtedy, gdy użytkownik jest zalogowany
 def pobierz_ostatni_wyjazd(user_name):
     try:
-        # TODO TRZEBA ZMIENIC
         query = """
-            SELECT TOP 1 lokalizacja_miasto 
-            FROM rezerwacje 
-            WHERE login_uzytkownika = :user_name 
-            ORDER BY data_do DESC
+            SELECT TOP 1 n.lokalizacja_miasto 
+            FROM rezerwacje r
+            INNER JOIN noclegi n ON r.id_noclegu = n.id_noclegu
+            INNER JOIN uzytkownicy u ON r.id_turysty = u.id_uzytkownika
+            WHERE u.imie = :user_name 
+            ORDER BY r.data_wymeldowania DESC
         """
         df_ostatni = conn.query(query, params={"user_name": user_name}, ttl=0)
         
@@ -164,18 +185,16 @@ def pobierz_ostatni_wyjazd(user_name):
             return df_ostatni.iloc[0]["lokalizacja_miasto"]
         return None
     except Exception as e:
+        st.error(f"Błąd SQL: {e}")
         return None
 
-# Blok wykonuje się tylko dla zalogowanego użytkownika
 if st.session_state.get("user_name"):
     ostatnie_miasto = pobierz_ostatni_wyjazd(st.session_state.user_name)
     
-    # Sekcja pokaże się tylko wtedy, gdy użytkownik ma jakąś historię w bazie
     if ostatnie_miasto:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("Twój ostatni wyjazd z nami:")
+        st.markdown("---")
+        st.subheader("Twój ostatni wyjazd z nami")
         
-        # Pobieramy odpowiednie zdjęcie z mapy (lub dajemy domyślne, jeśli miasto jest nowe)
         sciezka_zdjecia = MAPA_ZDJEC.get(ostatnie_miasto)
         
         last_trip_box = st.container(border=True)
@@ -185,12 +204,9 @@ if st.session_state.get("user_name"):
                 st.image(sciezka_zdjecia, width='stretch')
             with col_last_txt:
                 st.markdown(
-                    f"<div style='padding-top: 10px;'><b>{ostatnie_miasto}</b><br>"
-                    f"Wyjazd udany? Podziel się swoimi wrażeniami z pobytu!</div>",
+                    f"<div style='padding-top: 10px; font-size: 1.5rem;'><b>{ostatnie_miasto}</b><br>"
+                    f"<div style='padding-top: 10px; font-size: 1rem;'>Wyjazd udany? Podziel się swoimi wrażeniami z pobytu!</div>",
                     unsafe_allow_html=True,
                 )
 
-        st.markdown("**Podziel się swoimi wrażeniami, napisz opinię!**")
-
-# Stopka aplikacji
 render_page_footer()

@@ -10,3 +10,4 @@ dependencies:
       - requests
       - sqlalchemy
       - pyodbc
+      - extra-streamlit-components

@@ -284,3 +284,8 @@ button:has([data-testid="stElementToolbarButtonIcon"]),
     opacity: 0 !important;
     pointer-events: none !important;
 }
+
+/* Ukrycie podpowiedzi "Press Enter to apply" pod polami formularzy */
+div[data-testid="InputInstructions"] > span:nth-child(1) {
+    visibility: hidden;
+}
