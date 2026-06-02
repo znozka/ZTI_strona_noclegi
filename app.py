@@ -151,8 +151,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # Pokazuj sekcję z ostatnim wyjazdem tylko wtedy, gdy użytkownik jest zalogowany
 def pobierz_ostatni_wyjazd(user_name):
     try:
-        # UWAGA: Zmień 'rezerwacje', 'login_uzytkownika', 'miasto', 'data_do' 
-        # na faktyczne nazwy tabel i kolumn ze swojej bazy danych!
+        # TODO TRZEBA ZMIENIC
         query = """
             SELECT TOP 1 lokalizacja_miasto 
             FROM rezerwacje 
