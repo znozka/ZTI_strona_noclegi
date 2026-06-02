@@ -3,6 +3,18 @@ import datetime
 import pandas as pd
 from src.ui import render_page_header, render_page_footer
 
+# 1. Odzyskanie i walidacja ID noclegu
+if "id" in st.query_params:
+    st.session_state.selected_nocleg_id = int(st.query_params["id"])
+
+# Pobranie do lokalnej zmiennej
+selected_id = st.session_state.get("selected_nocleg_id")
+
+# Jeśli nie ma ID w URL ani w sesji, blokujemy wejście
+if not selected_id:
+    st.warning("Nie wybrano noclegu. Wracam do wyników...")
+    st.switch_page("pages/wyniki_wyszukiwania.py")
+
 # Ustawienia strony
 st.set_page_config(
     page_title="Szczegóły noclegu",
@@ -24,12 +36,11 @@ def pobierz_unikalne_miasta():
         df_miasta = conn.query("SELECT DISTINCT lokalizacja_miasto FROM noclegi WHERE lokalizacja_miasto IS NOT NULL ORDER BY lokalizacja_miasto", ttl=0)
         return df_miasta["lokalizacja_miasto"].tolist()
     except Exception:
-        # Lista ratunkowa, jeśli baza nie odpowie
         return ["Gdańsk", "Kraków", "Katowice", "Poznań", "Warszawa", "Wrocław", "Łódź"]
 
 lista_miast = pobierz_unikalne_miasta()
 
-# parametry z url
+# Pobieranie parametrów z URL / Sesji
 url_miejsce = st.query_params.get("miejsce", st.session_state.get("search_miejsce", ""))
 url_data_od = st.query_params.get("data_od", None)
 url_data_do = st.query_params.get("data_do", None)
@@ -67,27 +78,19 @@ st.session_state.search_miejsce = url_miejsce
 st.session_state.search_osoby = url_osoby
 st.session_state.search_clicked = url_clicked
 
+st.query_params["id"] = str(selected_id)
+st.query_params["miejsce"] = str(st.session_state.search_miejsce)
+st.query_params["data_od"] = str(st.session_state.search_data_od)
+st.query_params["data_do"] = str(st.session_state.search_data_do)
+st.query_params["osoby"] = str(st.session_state.search_osoby)
+st.query_params["clicked"] = str(st.session_state.search_clicked)
+
 # Określenie domyślnego indeksu dla selectboxa
 domyslny_indeks = None
 if st.session_state.get("search_miejsce") in lista_miast:
     domyslny_indeks = lista_miast.index(st.session_state.search_miejsce)
-
-
-# synchronizacja id z url
-url_id = st.query_params.get("id", None)
-
-if url_id is not None:
-    try:
-        # Jeśli ID przetrwało w URL (np. po F5), przywracamy do sesji
-        st.session_state.selected_nocleg_id = int(url_id)
-    except ValueError:
-        pass
-elif "selected_nocleg_id" in st.session_state and st.session_state.selected_nocleg_id is not None:
-    # Jeśli nie ma w URL, ale jest w sesji (świeże przejście), wstrzykujemy do paska przeglądarki
-    st.query_params["id"] = str(st.session_state.selected_nocleg_id)
-
-# Ostateczna zmienna do zapytania SQL
-selected_id = st.session_state.get("selected_nocleg_id", None)
+else:
+    domyslny_indeks = None
 
 # wyszukiwarka
 search_container = st.container(border=True)
@@ -126,9 +129,9 @@ with search_container:
             st.query_params["osoby"] = str(osoby_input)
             st.query_params["clicked"] = "True"
             
-            # Usuwamy id oglądanego noclegu, bo wracamy do listy wyników
-            if "id" in st.query_params:
-                del st.query_params["id"]
+            # # Usuwamy id oglądanego noclegu, bo wracamy do listy wyników
+            # if "id" in st.query_params:
+            #     del st.query_params["id"]
                 
             st.switch_page("pages/wyniki_wyszukiwania.py")
 
