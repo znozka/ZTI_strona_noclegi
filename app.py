@@ -3,6 +3,7 @@ import streamlit as st
 from src.ui import render_page_header, render_page_footer
 st.set_page_config(
     page_title="InnSight",
+    page_icon="assets/images/icon.svg",
     layout="wide",
     initial_sidebar_state="collapsed",
 )

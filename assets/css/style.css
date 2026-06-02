@@ -59,7 +59,7 @@ a, .page-nav-link, .page-action-button, .temp-links a {
 
 /* Linki w menu */
 .page-nav-link {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: var(--main-accent) !important;
 }
@@ -95,11 +95,19 @@ a, .page-nav-link, .page-action-button, .temp-links a {
     margin-bottom: 20px;
 }
 /* Stopka */
+div[data-testid="stMainBlockContainer"] {
+    padding-bottom: 0 !important;
+}
+
 .custom-footer {
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
+    /* ujemne margiesy, żeby wyciągnąć stopkę poza boczny kontener Streamlita na pełną szerokość ekranu */
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+
     background-color: #E5E5E5;
     color: #0F172A;
     text-align: center;
@@ -108,8 +116,9 @@ a, .page-nav-link, .page-action-button, .temp-links a {
     display: flex;
     justify-content: space-around;
     border-top: 1px solid rgba(0, 0, 0, 0.05);
-    z-index: 999;
+    margin-top: 40px; 
 }
+
 .custom-footer a {
     color: #0F172A !important;
     text-decoration: none !important;

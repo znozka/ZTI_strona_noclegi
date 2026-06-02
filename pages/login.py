@@ -3,7 +3,8 @@ from src.ui import render_page_header, render_page_footer
 from src.database import get_user_by_email, check_password
 
 st.set_page_config(
-    page_title="Logowanie - InnSight",
+    page_title="Logowanie",
+    page_icon="assets/images/icon.svg",
     layout="wide",
     initial_sidebar_state="collapsed"
 )

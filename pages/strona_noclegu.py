@@ -5,7 +5,8 @@ from src.ui import render_page_header, render_page_footer
 
 # Ustawienia strony
 st.set_page_config(
-    page_title="Szczegóły noclegu - InnSight",
+    page_title="Szczegóły noclegu",
+    page_icon="assets/images/icon.svg",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -16,11 +17,24 @@ render_page_header()
 # Połączenie z bazą danych
 conn = st.connection("azure_sql", type="sql")
 
-# 1. Pasek Wyszukiwania (Zgodny z wyniki_wyszukiwania.py)
-if "search_miejsce" not in st.session_state:
-    st.session_state.search_miejsce = ""
-if "search_osoby" not in st.session_state:
-    st.session_state.search_osoby = 2
+url_miejsce = st.query_params.get("miejsce", st.session_state.get("search_miejsce", ""))
+url_osoby = st.query_params.get("osoby", None)
+if url_osoby is not None:
+    try: url_osoby = int(url_osoby)
+    except ValueError: url_osoby = 2
+else:
+    url_osoby = st.session_state.get("search_osoby", 2)
+
+st.session_state.search_miejsce = url_miejsce
+st.session_state.search_osoby = url_osoby
+
+# Odczyt id noclegu bezpośrednio z adresu URL
+url_id = st.query_params.get("id", None)
+if url_id is not None:
+    try:
+        st.session_state.selected_nocleg_id = int(url_id)
+    except ValueError:
+        pass
 
 search_container = st.container(border=True)
 with search_container:
@@ -45,6 +59,13 @@ with search_container:
             st.session_state.search_clicked = True
             st.session_state.search_miejsce = miejsce_input
             st.session_state.search_osoby = osoby_input
+
+            st.query_params["miejsce"] = miejsce_input
+            st.query_params["osoby"] = str(osoby_input)
+            st.query_params["clicked"] = "True"
+            if "id" in st.query_params:
+                del st.query_params["id"]
+                
             st.switch_page("pages/wyniki_wyszukiwania.py")
 
 st.markdown("<br>", unsafe_allow_html=True)

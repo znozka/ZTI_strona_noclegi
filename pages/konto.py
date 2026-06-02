@@ -3,6 +3,7 @@ from src.ui import render_page_header, render_page_footer
 
 st.set_page_config(
     page_title="Moje konto",
+    page_icon="assets/images/icon.svg",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
