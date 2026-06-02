@@ -363,7 +363,7 @@ else:
                                 st.image(row['url_zdjecia'], width='stretch')
                             else:
                                 st.markdown(
-                                    "<div style='background-color: #E2E8F0; height: 160px; border-radius: 5px;'></div>", 
+                                    "<div class='surface-block' style='height: 160px;'></div>", 
                                     unsafe_allow_html=True
                                 )
                                 
@@ -374,7 +374,7 @@ else:
                                 st.caption(f"{row['lokalizacja_miasto']}")
                             with c_rating:
                                 st.markdown(
-                                    f"<div style='text-align: right; background-color: #E2E8F0; padding: 5px 10px; border-radius: 5px; font-weight: bold;'>{row['srednia_ocena']}/5</div>", 
+                                    f"<div class='rating-chip'>{row['srednia_ocena']}/5</div>", 
                                     unsafe_allow_html=True
                                 )
                             
@@ -385,13 +385,18 @@ else:
                             
                             st.markdown("<br>", unsafe_allow_html=True)
                             c_space, c_price_btn = st.columns([2, 1])
+
                             with c_price_btn:
-                                st.markdown(
-                                    f"<div style='text-align: right; font-size: 1.4rem; font-weight: bold; margin-bottom: 5px;'>{int(row['cena_za_noc'])} zł</div>", 
-                                    unsafe_allow_html=True
-                                )
+                                st.markdown(f"<div style='text-align: right; font-size: 1.4rem; ...'>{int(row['cena_za_noc'])} zł</div>", unsafe_allow_html=True)
+                                
                                 if st.button("Szczegóły", key=f"btn_{row['id_noclegu']}", width='stretch'):
+                                    # 1. Zapisujemy w sesji
                                     st.session_state.selected_nocleg_id = row['id_noclegu']
+                                    
+                                    # 2. DOPISZ TO: Wstrzykujemy ID do parametrów URL przed skokiem na nową stronę
+                                    st.query_params["id"] = str(row['id_noclegu'])
+                                    
+                                    # 3. Przełączamy stronę
                                     st.switch_page("pages/strona_noclegu.py")
                                     
         except Exception as e:

@@ -56,7 +56,7 @@ with cent_co:
                 st.error(f"Wystąpił błąd podczas rejestracji: {e}")
         
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #0F172A;'>Masz już konto?</div>", unsafe_allow_html=True)
+    st.markdown("<div class='text-muted' style='text-align: center;'>Masz już konto?</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Wróć do logowania", use_container_width=True):
         st.switch_page("pages/login.py")

@@ -23,7 +23,7 @@ with cent_co:
     st.markdown(
         """
         <div style='text-align: right; margin-top: 10px; margin-bottom: -20px;'>
-            <a href='#' style='color: #0F172A; font-size: 0.85rem;'>Zapomniałeś hasła?</a>
+            <a href='#' class='small-link'>Zapomniałeś hasła?</a>
         </div>
         """,
         unsafe_allow_html=True
@@ -47,7 +47,7 @@ with cent_co:
         
     st.markdown("<hr>", unsafe_allow_html=True)
     
-    st.markdown("<div style='text-align: center; color: #0F172A;'>Nie masz jeszcze konta?</div>", unsafe_allow_html=True)
+    st.markdown("<div class='text-muted' style='text-align: center;'>Nie masz jeszcze konta?</div>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     

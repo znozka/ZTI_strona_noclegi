@@ -1,10 +1,13 @@
 :root {
     --main-accent: #EAB308;
-    --page-bg: #F8FAFC;
+    --page-bg: #FFFFFF;
     --page-text: #0F172A;
+    --text-muted: #484848;
+    --surface: #F7F7F7;
+    --footer-bg: #E5E5E5;
     --page-border: rgba(0, 0, 0, 0.08);
     --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --header-height: 72px;
+    --header-height: 50px;
 }
 
 /* Ukrywanie systemowego menu z lewej */
@@ -41,6 +44,8 @@ a, .page-nav-link, .page-action-button, .temp-links a {
     background: var(--page-bg);
     color: var(--page-text);
     padding-top: var(--header-height);
+    overflow-x: hidden;
+    padding-bottom: 0 !important;
 }
 
 /* Header (menu górne) */
@@ -94,9 +99,31 @@ a, .page-nav-link, .page-action-button, .temp-links a {
     box-shadow: var(--card-shadow);
     margin-bottom: 20px;
 }
-/* Stopka */
-div[data-testid="stMainBlockContainer"] {
-    padding-bottom: 0 !important;
+.surface-block {
+    background-color: var(--surface);
+    width: 100%;
+    border-radius: 5px;
+}
+.surface-block-small {
+    height: 140px;
+    margin-bottom: 10px;
+}
+.surface-block-large {
+    height: 295px;
+}
+.rating-chip {
+    text-align: right;
+    background-color: var(--surface);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: 700;
+}
+.text-muted {
+    color: var(--text-muted) !important;
+}
+.small-link {
+    color: var(--page-text) !important;
+    font-size: 0.85rem;
 }
 
 .custom-footer {
@@ -108,8 +135,8 @@ div[data-testid="stMainBlockContainer"] {
     margin-left: -50vw;
     margin-right: -50vw;
 
-    background-color: #E5E5E5;
-    color: #0F172A;
+    background-color: var(--footer-bg);
+    color: var(--page-text);
     text-align: center;
     padding: 15px 0;
     font-size: 0.9rem;
@@ -120,7 +147,7 @@ div[data-testid="stMainBlockContainer"] {
 }
 
 .custom-footer a {
-    color: #0F172A !important;
+    color: var(--page-text) !important;
     text-decoration: none !important;
     font-weight: 500;
 }
