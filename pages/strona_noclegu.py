@@ -2,7 +2,7 @@ import streamlit as st
 import datetime
 import pandas as pd
 import folium
-from streamlit_folium import folium_static, st_folium
+from streamlit_folium import folium_static
 from src.ui import render_page_header, render_page_footer
 from src.utils import wyswietl_zdjecie
 
@@ -83,14 +83,14 @@ def build_detail_map(selected_id, selected_lat, selected_lon, df_hotels):
 
             # kod SVG tworzący łezkę z kropką w środku
             icon_html = f"""
-            <a href="?id={row['id_noclegu']}" target="_blank" style="text-decoration: none; cursor: pointer;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="{w}" height="{h}" style="filter: drop-shadow(0px 3px 4px rgba(0,0,0,0.3));">
-                    <path d="M12 0C5.38 0 0 5.38 0 12c0 9 12 20 12 20s12-11 12-20C24 5.38 18.62 0 12 0z" fill="{marker_color}"/>
-                    <circle cx="12" cy="12" r="4.5" fill="white"/>
-                    <circle cx="12" cy="12" r="3.5" fill="{bg_color}"/>
-                </svg>
-            </a>
-            """
+                <a href="?id={row['id_noclegu']}&miejsce={st.session_state.get('search_miejsce', '')}&data_od={st.session_state.get('search_data_od', '')}&data_do={st.session_state.get('search_data_do', '')}&osoby={st.session_state.get('search_osoby', '')}&clicked={st.session_state.get('search_clicked', '')}" target="_blank" style="text-decoration: none; cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="{w}" height="{h}" style="filter: drop-shadow(0px 3px 4px rgba(0,0,0,0.3));">
+                        <path d="M12 0C5.38 0 0 5.38 0 12c0 9 12 20 12 20s12-11 12-20C24 5.38 18.62 0 12 0z" fill="{marker_color}"/>
+                        <circle cx="12" cy="12" r="4.5" fill="white"/>
+                        <circle cx="12" cy="12" r="3.5" fill="{bg_color}"/>
+                    </svg>
+                </a>
+                """
 
             icon = folium.DivIcon(
                 html=icon_html,
@@ -370,7 +370,7 @@ else:
                 map_box = st.container(border=True)
                 with map_box:
                     if detail_map is not None:
-                        st_folium(detail_map, width=400, height=300, key="detail_map_key")
+                        folium_static(detail_map, width=400, height=300)
                     else:
                         st.markdown("<div class='text-muted' style='text-align: center; padding: 40px 0;'>[ Miejsce na mapę ]</div>", unsafe_allow_html=True)
 
