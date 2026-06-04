@@ -11,3 +11,5 @@ dependencies:
       - sqlalchemy
       - pyodbc
       - extra-streamlit-components
+      - folium
+      - streamlit-folium

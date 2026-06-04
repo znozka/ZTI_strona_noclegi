@@ -2,7 +2,6 @@ import datetime
 import streamlit as st
 import extra_streamlit_components as stx  # Potrzebne do zapisu na poziomie root
 from src.ui import render_page_header, render_page_footer
-from src.utils import wyswietl_zdjecie
 
 # Słownik mapujący miasta na zdjęcia, które masz w assets
 MAPA_ZDJEC = {
