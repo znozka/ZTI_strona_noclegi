@@ -1,6 +1,7 @@
 import streamlit as st
 import datetime
 from src.ui import render_page_header, render_page_footer
+from src.utils import wyswietl_zdjecie
 
 # Ustawienia strony
 st.set_page_config(
@@ -357,7 +358,11 @@ with panel_wynikow:
                     
                     with col_img:
                         if row['url_zdjecia']:
-                            st.image(row['url_zdjecia'], width='stretch')
+                            foto_ready = wyswietl_zdjecie(row['url_zdjecia'], szerokosc=400, wysokosc=330)
+                            if foto_ready:
+                                st.image(foto_ready, width='stretch')
+                            else:
+                                st.markdown("<div class='surface-block' style='height: 160px;'></div>", unsafe_allow_html=True)
                         else:
                             st.markdown("<div class='surface-block' style='height: 160px;'></div>", unsafe_allow_html=True)
                             
@@ -385,7 +390,6 @@ with panel_wynikow:
                     if kliknieto_tytul or kliknieto_przycisk:
                         st.session_state.selected_nocleg_id = row['id_noclegu']
                         st.query_params["id"] = str(row['id_noclegu']) # WAŻNE: Zostawiamy to!
-                        # Nie czyścimy query_params, bo wtedy F5 zresetuje wszystko
                         st.switch_page("pages/strona_noclegu.py")
                                 
     except Exception as e:

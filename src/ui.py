@@ -44,15 +44,15 @@ def render_page_header(label: str = "InnSight") -> None:
             st.switch_page("app.py")
 
     with col_login:
-        if st.button(button_label, key="header_login_btn", use_container_width=True):
+        if st.button(button_label, key="header_login_btn", width='stretch'):
             st.switch_page(target_page)
 
     with col_api:
-        if st.button("temp Testy API", key="header_api_btn", use_container_width=True):
+        if st.button("temp Testy API", key="header_api_btn", width='stretch'):
             st.switch_page("pages/testy_api.py")
 
     with col_db:
-        if st.button("temp Podgląd tabel", key="header_db_btn", use_container_width=True):
+        if st.button("temp Podgląd tabel", key="header_db_btn", width='stretch'):
             st.switch_page("pages/db_tables.py")
             
 def render_page_footer() -> None:

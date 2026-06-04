@@ -29,7 +29,7 @@ with cent_co:
     
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("Zarejestruj się i zaloguj", use_container_width=True):
+    if st.button("Zarejestruj się i zaloguj", width='stretch'):
         if not imie or not nazwisko or not nowy_email or not nowe_haslo or not powtórz_haslo:
             st.error("Wszystkie pola są wymagane!")
         elif len(nowe_haslo) < 8:
@@ -58,7 +58,7 @@ with cent_co:
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown("<div class='text-muted' style='text-align: center;'>Masz już konto?</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("Wróć do logowania", use_container_width=True):
+    if st.button("Wróć do logowania", width='stretch'):
         st.switch_page("pages/login.py")
     st.markdown("<hr>", unsafe_allow_html=True)
 

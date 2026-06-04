@@ -36,7 +36,7 @@ with cent_co:
     if st.session_state.get("just_logged_in"):
         st.markdown(f"Pomyślnie zalogowano! Witaj, {st.session_state.user_name}.")
         
-        if st.button("Przejdź do wyszukiwania", use_container_width=True, type="primary"):
+        if st.button("Przejdź do wyszukiwania", width='stretch', type="primary"):
             del st.session_state["just_logged_in"]  # Czyścimy flagę pomocniczą
             st.switch_page("app.py")                # Bezpieczne przekierowanie
             
@@ -53,7 +53,7 @@ with cent_co:
         )
         haslo = st.text_input("Wpisz hasło", type="password", placeholder="••••••••")
         
-        if st.button("Zaloguj się", use_container_width=True):
+        if st.button("Zaloguj się", width='stretch'):
             if not email or not haslo:
                 st.error("Proszę uzupełnić wszystkie pola.")
             else:
@@ -79,7 +79,7 @@ with cent_co:
         st.markdown("<div class='text-muted' style='text-align: center;'>Nie masz jeszcze konta?</div>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("Załóż konto", use_container_width=True, type="secondary"):
+        if st.button("Załóż konto", width='stretch', type="secondary"):
             st.switch_page("pages/rejestracja.py") 
 
     st.markdown("<hr>", unsafe_allow_html=True)

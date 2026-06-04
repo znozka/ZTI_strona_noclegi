@@ -1,5 +1,6 @@
 import streamlit as st
 from src.ui import render_page_header, render_page_footer
+from src.utils import wyswietl_zdjecie
 
 st.set_page_config(
     page_title="Baza danych",
@@ -37,20 +38,32 @@ except Exception as e:
 
 st.markdown("---")
 
-st.subheader("zdjecia_noclegu")
+st.subheader("zdjecia_noclegu (pierwsze 100)")
 query_zdjecia = """SELECT * FROM zdjecia_noclegu"""
 
 try:
-    df_zdjecia = conn.query(query_zdjecia, ttl=600)
+    df_zdjecia = conn.query(query_zdjecia, ttl=0) # ttl=0 aby zawsze widzieć świeże dane
     
     if df_zdjecia.empty:
         st.info("Tabela 'zdjecia_noclegu' jest pusta.")
     else:
+        df_display = df_zdjecia.head(100).copy()
+        
+        with st.spinner("Generuję miniatury"):
+            df_display["url_zdjecia"] = df_display["url_zdjecia"].apply(wyswietl_zdjecie)
+        
         st.dataframe(
-            df_zdjecia,
+            df_display,
             width='stretch',
-            hide_index=True
+            hide_index=True,
+            column_config={
+                "id_zdjecia": "id_zdjecia",
+                "id_noclegu": "id_noclegu",
+                "url_zdjecia": st.column_config.ImageColumn("podgląd"),
+                "czy_glowne": "czy_glowne"
+            }
         )
+            
 except Exception as e:
     st.error(f"Nie udało się pobrać danych z tabeli 'zdjecia_noclegu'. Błąd: {e}")
 

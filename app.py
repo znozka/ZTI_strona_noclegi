@@ -2,6 +2,7 @@ import datetime
 import streamlit as st
 import extra_streamlit_components as stx  # Potrzebne do zapisu na poziomie root
 from src.ui import render_page_header, render_page_footer
+from src.utils import wyswietl_zdjecie
 
 # Słownik mapujący miasta na zdjęcia, które masz w assets
 MAPA_ZDJEC = {
@@ -39,8 +40,6 @@ if "user_id" not in st.session_state:
         st.session_state.user_name = st.context.cookies.get("user_name")
         st.session_state.user_role = st.context.cookies.get("user_role")
         st.rerun()  # Przeładuj raz, aby UI od razu zobaczyło zalogowanego użytkownika
-
-# ---------------------------------------------------------------
 
 render_page_header()
 
@@ -103,7 +102,7 @@ with search_container:
         )
     with c5:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Szukaj", use_container_width=True, type="primary"):
+        if st.button("Szukaj", width='stretch', type="primary"):
             czyste_miejsce = miejsce_input if miejsce_input is not None else ""
             st.session_state.search_clicked = True
             st.session_state.search_miejsce = czyste_miejsce

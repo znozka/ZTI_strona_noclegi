@@ -2,6 +2,7 @@ import streamlit as st
 import datetime
 import pandas as pd
 from src.ui import render_page_header, render_page_footer
+from src.utils import wyswietl_zdjecie
 
 # 1. Odzyskanie i walidacja ID noclegu
 if "id" in st.query_params:
@@ -187,24 +188,28 @@ else:
             with col_main:
                 # Przygotowanie placeholderów na zdjęcia (wymagane 6 zdjęć do makiety)
                 while len(lista_zdjec) < 6:
-                    lista_zdjec.append(None) # Brakujące zdjęcia zastępujemy szarym blokiem
+                    lista_zdjec.append(None)
                 
-                # Funkcja pomocnicza do renderowania zdjęcia lub szrego tła
+                # Funkcja pomocnicza do renderowania małych zdjęć (dolny wiersz i boczny panel)
                 def render_photo(url):
-                    if url:
-                        st.image(url, width='stretch')
+                    # Wymuszamy stały wymiar 400x250 dla małych zdjęć
+                    foto_ready = wyswietl_zdjecie(url, szerokosc=400, wysokosc=250)
+                    if foto_ready:
+                        st.image(foto_ready, width='stretch')
                     else:
                         st.markdown(
                             "<div class='surface-block surface-block-small'></div>", 
                             unsafe_allow_html=True
                         )
-                
+                        
+                # WIERSZ 1: Duże zdjęcie + 2 małe obok
                 img_row_1 = st.columns([2, 1])
                 
                 with img_row_1[0]:
-                    # Duże zdjęcie po lewej stronie
-                    if lista_zdjec[0]:
-                        st.image(lista_zdjec[0], width='stretch')
+                    # Duże zdjęcie po lewej stronie (wymiar dopasowany geometrycznie: 800x510)
+                    foto_duze = wyswietl_zdjecie(lista_zdjec[0], szerokosc=800, wysokosc=510)
+                    if foto_duze:
+                        st.image(foto_duze, width='stretch')
                     else:
                         st.markdown(
                             "<div class='surface-block surface-block-large'></div>", 
@@ -216,8 +221,10 @@ else:
                     render_photo(lista_zdjec[1])
                     render_photo(lista_zdjec[2])
                 
-                # Dolny wiersz zdjęć: 3 równe kolumny
+                # WIERSZ 2: Dolny wiersz zdjęć: 3 równe kolumny
+                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True) # Delikatna przerwa pionowa
                 img_row_2 = st.columns([1, 1, 1])
+                
                 with img_row_2[0]:
                     render_photo(lista_zdjec[3])
                 with img_row_2[1]:
