@@ -38,7 +38,6 @@ def pobierz_unikalne_miasta():
 
 lista_miast = pobierz_unikalne_miasta()
 
-
 def build_search_map(df_hotels):
     df_coords = df_hotels.dropna(subset=["szerokosc_geo", "dlugosc_geo"])
     if df_coords.empty:
@@ -46,7 +45,17 @@ def build_search_map(df_hotels):
 
     center_lat = float(df_coords["szerokosc_geo"].astype(float).mean())
     center_lon = float(df_coords["dlugosc_geo"].astype(float).mean())
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=11, control_scale=True)
+    
+    m = folium.Map(
+        location=[center_lat, center_lon], 
+        zoom_start=11, 
+        control_scale=False,
+        tiles="cartodbpositron"
+    )
+
+    primary_color = st.config.get_option("theme.primaryColor")
+    text_color = st.config.get_option("theme.textColor")
+    bg_color = st.config.get_option("theme.backgroundColor")
 
     bounds = []
     for _, row in df_coords.iterrows():
@@ -63,28 +72,59 @@ def build_search_map(df_hotels):
             "osoby": str(st.session_state.search_osoby),
             "clicked": "True",
         })
-        js = f"window.parent.location.href = window.parent.location.pathname + '?{query}'; return false;"
-        popup_html = (
-            f"<div style='font-size: 14px; max-width: 220px;'>"
-            f"<strong>{row['nazwa']}</strong><br>"
-            f"{row['lokalizacja_miasto']}<br>"
-            f"<a href='#' onclick=\"{js}\">Zobacz szczegóły</a>"
-            f"</div>"
+        
+        # kliknięcie pinezki przekierowuje na stronę noclegu
+        js = f"window.open(window.top.location.origin + '/strona_noclegu?{query}', '_blank'); return false;"
+        
+        popup_html = f"""
+        <div style="
+            font-family: 'Source Sans Pro', sans-serif; 
+            font-size: 13px; 
+            color: {text_color};
+            line-height: 1.4;
+            max-width: 200px;
+        ">
+            <strong style="font-size: 14px; color: {primary_color};">{row['nazwa']}</strong><br>
+            <span style="color: #767676;">{row['lokalizacja_miasto']}</span><br>
+            <a href="#" onclick="{js}" style="
+                color: {primary_color}; 
+                text-decoration: none; 
+                font-weight: bold;
+            ">Zobacz szczegóły →</a>
+        </div>
+        """
+
+        w, h = (22, 36)
+        anchor_x = w // 2
+        anchor_y = h
+        
+        icon_html = f"""
+        <div style="cursor: pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="{w}" height="{h}" style="filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.3));">
+                <path d="M12 0C5.38 0 0 5.38 0 12c0 9 12 20 12 20s12-11 12-20C24 5.38 18.62 0 12 0z" fill="{primary_color}"/>
+                <circle cx="12" cy="12" r="4.5" fill="white"/>
+                <circle cx="12" cy="12" r="3.5" fill="{bg_color}"/>
+            </svg>
+        </div>
+        """
+        
+        icon = folium.DivIcon(
+            html=icon_html,
+            icon_size=(w, h),
+            icon_anchor=(anchor_x, anchor_y)
         )
 
         folium.Marker(
             location=[lat, lon],
             tooltip=row["nazwa"],
             popup=folium.Popup(popup_html, max_width=250),
-            icon=folium.Icon(color="blue", icon="info-sign"),
+            icon=icon,
         ).add_to(m)
 
     if len(bounds) > 1:
         m.fit_bounds(bounds, padding=(40, 40))
 
     return m
-
-# odzyskiwanie stanu (Hierarchia: URL -> Sesja -> Domyślne)
 
 # formularz wyszukiwania
 if "miejsce" in st.query_params:
@@ -195,10 +235,9 @@ with search_container:
     with c5:
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- ROZWIĄZANIE: Przygotowujemy dane wejściowe ---
         czyste_miejsce = miejsce_input if miejsce_input is not None else ""
         
-        # ZAWSZE dbamy o to, aby te parametry były w URL (przy każdym rerunie, np. z filtrów bocznych)
+        # ZAWSZE dbamy o to, aby te parametry były w URL (przy każdym rerun, np. z filtrów bocznych)
         st.query_params["miejsce"] = czyste_miejsce
         st.query_params["data_od"] = str(data_od_input)
         st.query_params["data_do"] = str(data_do_input)
@@ -215,10 +254,12 @@ with search_container:
             st.rerun()
 
 # Layout dolny (mapa + filtry + wyniki)
-map_container = st.container()
 panel_filtrow, panel_wynikow = st.columns([1, 3])
 
 with panel_filtrow:
+    # kontener na mapkę
+    sidebar_map_container = st.container()
+    
     st.subheader("Sortuj")
     sort_options_list = ["od najtańszych", "od najdroższych", "najwyższa ocena"]
     try: sort_index = sort_options_list.index(url_filters["sort"])
@@ -403,13 +444,13 @@ with panel_wynikow:
             st.info("Brak dostępnych ofert dla wybranych kryteriów.")
         else:
             search_map = build_search_map(df_wyniki)
+            
+            # mapa do panelu bocznego
             if search_map is not None:
-                with map_container:
-                    st.markdown("### Mapa ofert")
-                    st.markdown("Kliknij marker i wybierz 'Zobacz szczegóły', aby przejść do strony noclegu.")
-                    folium_static(search_map, width=1000, height=300)
-                    with st.expander("Powiększ mapę"):
-                        folium_static(search_map, width=1000, height=500)
+                with sidebar_map_container:
+                    st.markdown("#### Lokalizacja ofert")
+                    folium_static(search_map, width=320, height=280)
+                    st.markdown("---")
             
             for _, row in df_wyniki.iterrows():
                 card = st.container(border=True)
@@ -449,7 +490,7 @@ with panel_wynikow:
                     # Wewnątrz bloku sprawdzającego kliknięcie:
                     if kliknieto_tytul or kliknieto_przycisk:
                         st.session_state.selected_nocleg_id = row['id_noclegu']
-                        st.query_params["id"] = str(row['id_noclegu']) # WAŻNE: Zostawiamy to!
+                        st.query_params["id"] = str(row['id_noclegu']) 
                         st.switch_page("pages/strona_noclegu.py")
                                 
     except Exception as e:
