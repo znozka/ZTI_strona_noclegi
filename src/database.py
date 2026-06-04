@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import streamlit as st
 import bcrypt
 from sqlalchemy import text
 
@@ -252,3 +253,27 @@ def get_and_save_serpapi_cities_to_file(api_key, filename="miasta.txt", limit=20
         print(f"[BŁĄD] Problem podczas zapisu do pliku: {e}")
         
     return sorted(list(existing_cities))
+
+def update_user_password(conn, user_id, new_password_hash):
+    try:
+        with conn.session as session:
+
+            query = text("""
+                UPDATE uzytkownicy 
+                SET haslo_hash = :password_hash 
+                WHERE id_uzytkownika = :user_id
+            """)
+            session.execute(query, {"password_hash": new_password_hash, "user_id": user_id})
+            session.commit()
+        return True
+    except Exception as e:
+        st.error(f"Szczegóły błędu bazy danych: {e}")
+        return False
+    
+def hash_password(password: str) -> str:
+    """
+    Haszuje hasło za pomocą biblioteki bcrypt w dokładnie taki sam sposób,
+    w jaki odbywa się to podczas rejestracji użytkownika.
+    """
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')

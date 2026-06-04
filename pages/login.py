@@ -10,17 +10,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+if "going_to_login" in st.session_state:
+    del st.session_state["going_to_login"]
+
 cookie_manager = stx.CookieManager(key="cookie_handler")
 
-if "user_id" not in st.session_state:
-    cookie_uid = st.context.cookies.get("user_id")
-    if cookie_uid:
-        st.session_state.user_id = cookie_uid
-        st.session_state.user_name = st.context.cookies.get("user_name")
-        st.session_state.user_role = st.context.cookies.get("user_role")
-
-# Jeśli sesja jest już aktywna i nie jesteśmy w trakcie logowania -> na stronę główną
-if "user_id" in st.session_state and not st.session_state.get("just_logged_in"):
+if "user_id" in st.session_state and not st.session_state.get("needs_cookie_save"):
     st.switch_page("app.py")
 
 render_page_header()
@@ -32,45 +27,60 @@ with cent_co:
     st.markdown("<br>", unsafe_allow_html=True) 
     st.header("Zaloguj się")
     
-    # Jeśli użytkownik wpisał poprawne hasło, pokazujemy mu ekran sukcesu
     if st.session_state.get("just_logged_in"):
         st.markdown(f"Pomyślnie zalogowano! Witaj, {st.session_state.user_name}.")
         
-        if st.button("Przejdź do wyszukiwania", width='stretch', type="primary"):
-            del st.session_state["just_logged_in"]  # Czyścimy flagę pomocniczą
-            st.switch_page("app.py")                # Bezpieczne przekierowanie
+        if st.button("Przejdź do wyszukiwania", use_container_width=True, type="primary"):
+            del st.session_state["just_logged_in"]  
+            st.switch_page("app.py")               
             
     else:
-        # Standardowy formularz logowania
-        email = st.text_input("Wpisz swój adres email", placeholder="np. jan.kowalski@email.com")
-        st.markdown(
-            """
-            <div style='text-align: right; margin-top: 10px; margin-bottom: -20px;'>
-                <a href='#' class='small-link'>Zapomniałeś hasła?</a>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        haslo = st.text_input("Wpisz hasło", type="password", placeholder="••••••••")
-        
-        if st.button("Zaloguj się", width='stretch'):
+
+        with st.form("login_form", clear_on_submit=False, border=False):
+            email = st.text_input("Wpisz swój adres email", placeholder="np. jan.kowalski@email.com", key="login_email")
+
+            st.markdown(
+                """
+                <style>
+                    .forgot-password-link {
+                        text-decoration: none; 
+                        font-size: 0.9rem; 
+                        color: #0066cc; 
+                        padding: 10px 5px; /* Dodaje niewidzialną przestrzeń wokół tekstu, zwiększając obszar kliknięcia */
+                        display: inline-block;
+                        transition: color 0.2s ease;
+                    }
+                    .forgot-password-link:hover {
+                        color: #004499; /* Ciemniejszy kolor po najechaniu, dający sygnał użytkownikowi */
+                        text-decoration: underline;
+                    }
+                </style>
+                <div style='text-align: right; margin-top: 5px; margin-bottom: -15px;'>
+                    <a href='/reset_hasla' target='_self' class='forgot-password-link'>Zapomniałeś hasła?</a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            haslo = st.text_input("Wpisz hasło", type="password", placeholder="••••••••", key="login_password")
+            
+            submit_button = st.form_submit_button("Zaloguj się", use_container_width=True)
+            
+        if submit_button:
             if not email or not haslo:
                 st.error("Proszę uzupełnić wszystkie pola.")
             else:
                 user = get_user_by_email(conn, email)
                 if user is not None and check_password(haslo, user.haslo_hash):
                     
-                    # 1. Zapisujemy dane do session_state (działa natychmiastowo)
                     st.session_state.user_id = user.id_uzytkownika
                     st.session_state.user_name = user.imie
                     st.session_state.user_role = user.rola
-                    
-                    # 2. KLUCZOWE: Ustawiamy flagę informującą app.py, że musi zapisać ciasteczka u siebie (jako ROOT)
-                    st.session_state.needs_cookie_save = True
+
+                    st.session_state.pop("needs_cookie_save", None)
                     
                     st.success(f"Pomyślnie zalogowano! Witaj, {user.imie}.")
                     
-                    # 3. Przekierowujemy bezpiecznie na stronę główną
                     st.switch_page("app.py")
                 else:
                     st.error("Niepoprawny adres e-mail lub hasło.")
@@ -79,7 +89,7 @@ with cent_co:
         st.markdown("<div class='text-muted' style='text-align: center;'>Nie masz jeszcze konta?</div>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("Załóż konto", width='stretch', type="secondary"):
+        if st.button("Załóż konto", use_container_width=True, type="secondary"):
             st.switch_page("pages/rejestracja.py") 
 
     st.markdown("<hr>", unsafe_allow_html=True)

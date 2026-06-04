@@ -2,7 +2,7 @@ import streamlit as st
 import datetime
 import pandas as pd
 import folium
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 from src.ui import render_page_header, render_page_footer
 from src.utils import wyswietl_zdjecie
 
@@ -370,7 +370,7 @@ else:
                 map_box = st.container(border=True)
                 with map_box:
                     if detail_map is not None:
-                        folium_static(detail_map, width=400, height=300)
+                        st_folium(detail_map, width=400, height=300)
                     else:
                         st.markdown("<div class='text-muted' style='text-align: center; padding: 40px 0;'>[ Miejsce na mapę ]</div>", unsafe_allow_html=True)
 

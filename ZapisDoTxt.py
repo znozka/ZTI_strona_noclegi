@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 
 # Folder główny projektu
-PROJECT_DIR = r"C:\Users\edyta\Desktop\ZTI_strona_noclegi"
+PROJECT_DIR = r"C:\Users\edyta\Documents\GitHub\ZTI_strona_noclegi"
 
 # Pobranie aktualnej daty w formacie RRRR-MM-DD
 current_date = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -11,7 +11,7 @@ current_date = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 OUTPUT_FILE = f"kod_projektu_{current_date}.txt"
 
 # Rozszerzenia plików, które chcemy kopiować
-ALLOWED_EXTENSIONS = [".py", ".css", ".txt"]
+ALLOWED_EXTENSIONS = [".py", ".css"]
 
 # Foldery do pominięcia
 IGNORE_FOLDERS = ["__pycache__", ".git", ".venv", "env"]

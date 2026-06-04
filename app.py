@@ -1,9 +1,9 @@
 import datetime
 import streamlit as st
-import extra_streamlit_components as stx  # Potrzebne do zapisu na poziomie root
+import extra_streamlit_components as stx  
 from src.ui import render_page_header, render_page_footer
 
-# Słownik mapujący miasta na zdjęcia, które masz w assets
+
 MAPA_ZDJEC = {
     "Gdańsk": "assets/images/Gdańsk.jpg",
     "Kraków": "assets/images/Kraków.jpeg",
@@ -21,7 +21,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- NOWOŚĆ: OBSŁUGA SESJI I CIASTECZEK NA POZIOMIE ROOT (/) ---
 
 # KROK A: Jeśli użytkownik przyszedł ze strony logowania, "upiecz" ciasteczka na poziomie głównej ścieżki (/)
 if st.session_state.get("needs_cookie_save"):
@@ -31,14 +30,22 @@ if st.session_state.get("needs_cookie_save"):
     cookie_manager.set("user_role", st.session_state.user_role, max_age=86400, key="rc_urole")
     st.session_state["needs_cookie_save"] = False  # Oznacz jako wykonane, aby nie zapętlać
 
-# KROK B: Automatyczne odbudowanie sesji z ciasteczek po naciśnięciu F5
-if "user_id" not in st.session_state:
+# KROK B: Automatyczne odbudowanie sesji z ciasteczek (Nie zmieniać!)
+if "user_id" not in st.session_state and not st.session_state.get("going_to_login"):
     cookie_uid = st.context.cookies.get("user_id")
-    if cookie_uid:
+    cookie_name = st.context.cookies.get("user_name")
+    cookie_role = st.context.cookies.get("user_role")
+
+    if (
+        cookie_uid
+        and cookie_uid not in ["None", ""]
+        and cookie_name
+        and cookie_name not in ["None", ""]
+    ):
         st.session_state.user_id = cookie_uid
-        st.session_state.user_name = st.context.cookies.get("user_name")
-        st.session_state.user_role = st.context.cookies.get("user_role")
-        st.rerun()  # Przeładuj raz, aby UI od razu zobaczyło zalogowanego użytkownika
+        st.session_state.user_name = cookie_name
+        st.session_state.user_role = cookie_role
+        st.rerun()
 
 render_page_header()
 
@@ -62,7 +69,7 @@ miejsce_sesja = st.session_state.get("search_miejsce", "")
 if miejsce_sesja in lista_miast and miejsce_sesja != "":
     domyslny_indeks = lista_miast.index(miejsce_sesja)
 else:
-    domyslny_indeks = None # Wymuszamy None, dzięki czemu zadziała placeholder
+    domyslny_indeks = None 
 
 st.title("Witaj w InnSight")
 if st.session_state.get("user_name"):

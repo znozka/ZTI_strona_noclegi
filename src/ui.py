@@ -45,6 +45,8 @@ def render_page_header(label: str = "InnSight") -> None:
 
     with col_login:
         if st.button(button_label, key="header_login_btn", width='stretch'):
+            if not user_name:
+                st.session_state["going_to_login"] = True
             st.switch_page(target_page)
 
     with col_api:
