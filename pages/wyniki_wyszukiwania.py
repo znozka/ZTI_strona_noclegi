@@ -104,7 +104,7 @@ def build_search_map(df_hotels):
             max-width: 200px;
         ">
             <strong style="font-size: 14px; color: {primary_color};">{row['nazwa']}</strong><br>
-            <span style="color: #767676;">{row['lokalizacja_miasto']}</span><br>
+            <span style="color: #767676;">{row['lokalizacja_adres']}</span><br>
             <a href="#" onclick="{js}" style="
                 color: {primary_color}; 
                 text-decoration: none; 
@@ -470,7 +470,7 @@ with panel_wynikow:
 
     query_szukaj = f"""
     SELECT 
-        n.id_noclegu, n.nazwa, n.lokalizacja_miasto, n.opis, n.cena_za_noc, n.srednia_ocena,
+        n.id_noclegu, n.nazwa, n.lokalizacja_miasto, n.lokalizacja_adres, n.opis, n.cena_za_noc, n.srednia_ocena,
         n.szerokosc_geo, n.dlugosc_geo,
         (SELECT TOP 1 url_zdjecia FROM zdjecia_noclegu WHERE id_noclegu = n.id_noclegu ORDER BY czy_glowne DESC) AS url_zdjecia
     FROM noclegi n
@@ -512,7 +512,7 @@ with panel_wynikow:
                         c_title, c_rating = st.columns([3, 1])
                         with c_title:
                             kliknieto_tytul = st.button(row['nazwa'], key=f"title_btn_{row['id_noclegu']}")
-                            st.caption(f"{row['lokalizacja_miasto']}")
+                            st.caption(f"{row['lokalizacja_adres']}")
                         with c_rating:
                             st.markdown(f"<div class='rating-chip'>{row['srednia_ocena']}/5</div>", unsafe_allow_html=True)
                         

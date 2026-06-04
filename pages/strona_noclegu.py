@@ -111,7 +111,7 @@ def build_detail_map(selected_id, selected_lat, selected_lon, df_hotels):
                 border-radius: 8px;
             ">
                 <strong style="font-size: 14px; color: {nazwa_color};">{row['nazwa']}</strong><br>
-                <span style="color: #767676;">{row['lokalizacja_miasto']}</span>
+                <span style="color: #767676;">{row['lokalizacja_adres']}</span>
             </div>
             """
 
@@ -282,7 +282,7 @@ else:
 
             # Nazwa i lokalizacja obiektu
             st.markdown(f"<h1 style='margin-bottom: 0px;'>{nocleg['nazwa']}</h1>", unsafe_allow_html=True)
-            st.markdown(f"<p class='text-muted' style='font-size: 1.1rem; margin-top: 5px;'>{nocleg['lokalizacja_miasto']}, {nocleg['lokalizacja_adres']}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p class='text-muted' style='font-size: 1.1rem; margin-top: 5px;'>{nocleg['lokalizacja_adres']}</p>", unsafe_allow_html=True)
             
             # Podział ekranu na sekcję główną (zdjęcia) i panel boczny (opinie + mapa)
             col_main, col_side = st.columns([2.8, 1.2])

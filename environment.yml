@@ -13,3 +13,4 @@ dependencies:
       - extra-streamlit-components
       - folium
       - streamlit-folium
+      - geopy
