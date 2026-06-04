@@ -20,6 +20,25 @@ st.markdown("### Przeglądaj dostępne oferty noclegów")
 
 conn = st.connection("azure_sql", type="sql")
 
+# pobieranie najwyższej ceny dla bieżących kryteriów wyszukiwania
+def pobierz_najwyzsza_cene(miejsce, osoby):
+    try:
+        where_clauses = ["maks_liczba_osob >= :osoby"]
+        sql_params = {"osoby": osoby}
+        
+        if miejsce and miejsce.strip():
+            where_clauses.append("lokalizacja_miasto LIKE :miasto")
+            sql_params["miasto"] = f"%{miejsce.strip()}%"
+            
+        query = f"SELECT MAX(cena_za_noc) as max_cena FROM noclegi WHERE {' AND '.join(where_clauses)}"
+        df = conn.query(query, params=sql_params, ttl=0)
+        
+        if not df.empty and df.iloc[0]["max_cena"] is not None:
+            return int(df.iloc[0]["max_cena"])
+    except Exception:
+        pass
+    return 2000  # fallback
+
 # Funkcja callback obsługująca kliknięcie w dowolny element noclegu
 def przejdz_do_szczegolow(id_noclegu):
     st.session_state.selected_nocleg_id = id_noclegu
@@ -160,6 +179,9 @@ if "clicked" in st.query_params:
 elif "search_clicked" not in st.session_state:
     st.session_state.search_clicked = bool(st.session_state.search_miejsce)
 
+# dynamiczne wyliczenie najwyższej ceny dla aktualnego wyszukiwania
+max_cena_baza = pobierz_najwyzsza_cene(st.session_state.get("search_miejsce", ""), st.session_state.search_osoby)
+
 # filtry boczne i sortowanie
 if "saved_filters" not in st.session_state:
     st.session_state.saved_filters = {}
@@ -171,10 +193,11 @@ def pobierz_filtr(param_name, domyslna_wartosc, transformacja=lambda x: x):
         return wartosc
     return st.session_state.saved_filters.get(param_name, domyslna_wartosc)
 
+# Podmieniamy domyślne 2000 na zmienną max_cena_baza
 url_filters = {
     "sort": pobierz_filtr("sort", "od najtańszych"),
     "cena_min": pobierz_filtr("cena_min", 0, lambda x: int(x) if str(x).isdigit() else 0),
-    "cena_max": pobierz_filtr("cena_max", 2000, lambda x: int(x) if str(x).isdigit() else 2000),
+    "cena_max": pobierz_filtr("cena_max", max_cena_baza, lambda x: int(x) if str(x).isdigit() else max_cena_baza),
     "f_hotel": pobierz_filtr("f_hotel", False, lambda x: x == "True" or x is True),
     "f_apartament": pobierz_filtr("f_apartament", False, lambda x: x == "True" or x is True),
     "f_b_and_b": pobierz_filtr("f_b_and_b", False, lambda x: x == "True" or x is True),
@@ -244,13 +267,30 @@ with search_container:
         st.query_params["osoby"] = str(osoby_input)
         st.query_params["clicked"] = "True"
         
-        # Przycisk teraz odpowiada wyłącznie za zatwierdzenie zmian i odświeżenie wyników bazy danych
         if st.button("Szukaj", width='stretch', type="primary"):
+            # Czyszczenie filtrów cenowych z adresu URL
+            for klucz in ["cena_min", "cena_max"]:
+                if klucz in st.query_params:
+                    del st.query_params[klucz]
+            
+            # Czyszczenie filtrów cenowych z zapamiętanego słownika
+            if "saved_filters" in st.session_state:
+                st.session_state.saved_filters.pop("cena_min", None)
+                st.session_state.saved_filters.pop("cena_max", None)
+            
+            # Zwiększenie wersji, aby zmusić st.number_input w panelu bocznym do odświeżenia klucza
+            if "filters_version" in st.session_state:
+                st.session_state.filters_version += 1
+            else:
+                st.session_state.filters_version = 1
+            
+            # Zapisanie nowych kryteriów głównych
             st.session_state.search_clicked = True
             st.session_state.search_miejsce = czyste_miejsce
             st.session_state.search_osoby = osoby_input
             st.session_state.search_data_od = data_od_input
             st.session_state.search_data_do = data_do_input
+            
             st.rerun()
 
 # Layout dolny (mapa + filtry + wyniki)
@@ -279,11 +319,12 @@ with panel_filtrow:
     
     st.write("**Cena za noc**")
     c_min, c_max = st.columns(2)
+    
     with c_min:
-        cena_min = st.number_input("Od", min_value=0, value=url_filters["cena_min"], step=50, key=f"cena_min_{version}")
+        cena_min = st.number_input("Od", min_value=0, value=url_filters["cena_min"], step=100, key=f"cena_min_{version}")
         st.query_params["cena_min"] = str(cena_min)
     with c_max:
-        cena_max = st.number_input("Do", min_value=0, value=url_filters["cena_max"], step=50, key=f"cena_max_{version}")
+        cena_max = st.number_input("Do", min_value=0, value=url_filters["cena_max"], step=100, key=f"cena_max_{version}")
         st.query_params["cena_max"] = str(cena_max)
         
     st.markdown("---")
