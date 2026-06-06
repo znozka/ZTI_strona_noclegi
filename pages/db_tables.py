@@ -38,7 +38,7 @@ except Exception as e:
 
 st.markdown("---")
 
-st.subheader("zdjecia_noclegu (pierwsze 100)")
+st.subheader("zdjecia_noclegu (ostatnie 100)")
 query_zdjecia = """SELECT * FROM zdjecia_noclegu"""
 
 try:
@@ -47,7 +47,7 @@ try:
     if df_zdjecia.empty:
         st.info("Tabela 'zdjecia_noclegu' jest pusta.")
     else:
-        df_display = df_zdjecia.head(100).copy()
+        df_display = df_zdjecia.tail(100).copy()
         
         with st.spinner("Generuję miniatury"):
             df_display["url_zdjecia"] = df_display["url_zdjecia"].apply(wyswietl_zdjecie)
