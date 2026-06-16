@@ -567,7 +567,7 @@ with panel_wynikow:
                     
                     with col_img:
                         if row['url_zdjecia']:
-                            foto_ready = wyswietl_zdjecie(row['url_zdjecia'], szerokosc=400, wysokosc=330)
+                            foto_ready = wyswietl_zdjecie(row['url_zdjecia'], szerokosc=400, wysokosc=300)
                             if foto_ready:
                                 st.image(foto_ready, width='stretch')
                             else:
@@ -579,7 +579,11 @@ with panel_wynikow:
                         c_title, c_rating = st.columns([2.8, 1.2])
                         with c_title:
                             kliknieto_tytul = st.button(row['nazwa'], key=f"title_btn_{row['id_noclegu']}")
-                            st.caption(f"{row['lokalizacja_adres']}")
+                            st.markdown(f"""
+                            <div style='color: #767676; font-size: 0.85rem; margin-top:-16px; margin-bottom: 10px;'>
+                                {row['lokalizacja_adres']}
+                            </div>
+                            """, unsafe_allow_html=True)
                         
                         with c_rating:
                             ocena_val = row['srednia_ocena']
@@ -592,15 +596,24 @@ with panel_wynikow:
                             
                             st.markdown(f"""
                                 <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 4px;">
-                                    <div class='rating-chip' style='margin: 0; font-size: 25px; font-weight: bold; line-height: 1;'>
+                                    <div class='rating-chip' style='margin: 0; font-size: 20px; font-weight: bold; line-height: 1;'>
                                         {ocena_html}
                                     </div>
                                 </div>
                             """, unsafe_allow_html=True)
                         
                         opis_skrocony = row['opis'] if row['opis'] else "Brak opisu obiektu."
-                        if len(opis_skrocony) > 160:
-                            opis_skrocony = opis_skrocony[:200] + "..."
+                        if len(opis_skrocony) > 180:
+                            # bierzemy maksymalny wycinek tekstu
+                            wycinek = opis_skrocony[:200]
+                            
+                            # szukamy ostatniej spacji w tym wycinku, aby nie rozbić wyrazu
+                            ostatnia_spacja = wycinek.rfind(' ')
+                            if ostatnia_spacja != -1:
+                                wycinek = wycinek[:ostatnia_spacja]
+                            
+                            # usuwamy z końca spacje, przecinki i kropki, aby nie było ",..." lub "...."
+                            opis_skrocony = wycinek.rstrip('.,; ') + "..."
 
                         st.markdown(
                             f"""
@@ -614,10 +627,24 @@ with panel_wynikow:
                             """,
                             unsafe_allow_html=True
                         )
-                        c_space, c_price_btn = st.columns([2, 1])
+                        c_space, c_price_btn = st.columns([3, 1])
 
                         with c_price_btn:
-                            st.markdown(f"<div style='text-align: right; font-size: 3rem;'>{int(row['cena_za_noc'])} zł</div>", unsafe_allow_html=True)
+                            cena_za_noc = row['cena_za_noc']
+                            liczba_nocy = (st.session_state.search_data_do - st.session_state.search_data_od).days
+                            
+                            # zabezpieczenie (minimum 1 noc)
+                            liczba_nocy = max(1, liczba_nocy) 
+                            
+                            cena_calkowita = int(cena_za_noc) * liczba_nocy
+                            
+                            st.markdown(f"""
+                            <div style='text-align: right; line-height: 1.1; margin-bottom: 10px;'>
+                                <span style='font-size: 2rem; font-weight: bold;'>{cena_calkowita} zł</span><br>
+                                <span style='font-size: 0.9rem; color: #767676;'>{int(cena_za_noc)} za noc</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
                             kliknieto_przycisk = st.button("Szczegóły", key=f"btn_{row['id_noclegu']}", width='stretch')
                     
                     if kliknieto_tytul or kliknieto_przycisk:

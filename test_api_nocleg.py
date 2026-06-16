@@ -1,4 +1,4 @@
-# import streamlit as st
+import streamlit as st
 from src.database import fetch_and_sync_hotels_from_serpapi
 
 print("[TEST] Uruchamiam skrypt testowy API...")
@@ -10,7 +10,7 @@ except Exception as e:
     print(f"[TEST] BŁĄD: Nie można połączyć się z bazą danych: {e}")
     exit(1)
 
-API_KEY = "e774a85944636029ae51a815780a6058c0726e47040c8d68a61c665089c128c9" 
+API_KEY = st.secrets.api_keys["API_KEY_SERPAPI"]
 
 MIASTO = "Wroclaw"
 DATA_IN = "2026-06-15"   
@@ -27,6 +27,3 @@ try:
     print(f"[TEST] SUKCES! Zapisano {wynik} hoteli w bazie danych.")
 except Exception as e:
     print(f"[TEST] Wystąpił błąd podczas wykonywania funkcji: {e}")
-
-
-
