@@ -2,7 +2,8 @@ import streamlit as st
 import datetime
 import pandas as pd
 import folium
-from streamlit_folium import st_folium 
+import html
+from streamlit_folium import folium_static
 from src.ui import render_page_header, render_page_footer
 from src.utils import wyswietl_zdjecie
 
@@ -279,8 +280,41 @@ else:
             detail_map = build_detail_map(selected_id, nocleg["szerokosc_geo"], nocleg["dlugosc_geo"], df_map_hotels)
 
             # Nazwa i lokalizacja obiektu
-            st.markdown(f"<h1 style='margin-bottom: 0px;'>{nocleg['nazwa']}</h1>", unsafe_allow_html=True)
-            st.markdown(f"<p class='text-muted' style='font-size: 1.1rem; margin-top: 5px;'>{nocleg['lokalizacja_adres']}</p>", unsafe_allow_html=True)
+            st.markdown("""
+            <style>
+                /* kasowanie domyślnych marginesów Streamlitowych kontenerów */
+                div[data-testid="element-container"] {
+                    margin-top: 0px !important;
+                    margin-bottom: 0px !important;
+                    padding-bottom: 0px !important;
+                }
+
+                /* małe odstępy w pionie i poziomie dla siatek kolumn */
+                [data-testid="stVerticalBlock"], 
+                [data-testid="stVerticalBlockRootElement"],
+                .stVerticalBlock {
+                    gap: 8px !important;
+                }
+                [data-testid="stHorizontalBlock"], 
+                .stHorizontalBlock {
+                    gap: 8px !important;
+                }
+                
+                /* zmniejszenie paddingu wewnątrz st.container(border=True) */
+                [data-testid="stVerticalBlockBorderWrapper"] > div {
+                    padding-top: 10px !important;
+                    padding-bottom: 12px !important;
+                    padding-left: 14px !important;
+                    padding-right: 14px !important;
+                }
+            </style>
+            """, unsafe_allow_html=True)
+
+            # nazwa i adres w jendym bloku
+            st.markdown(f"""
+                <h1 style='margin: 0px; padding: 0px; line-height: 1.1;'>{nocleg['nazwa']}</h1>
+                <p class='text-muted' style='font-size: 1.1rem; margin: 4px 0px 20px 0px; padding: 0px;'>{nocleg['lokalizacja_adres']}</p>
+            """, unsafe_allow_html=True)
             
             # Podział ekranu na sekcję główną (zdjęcia) i panel boczny (opinie + mapa)
             col_main, col_side = st.columns([2.8, 1.2])
@@ -290,7 +324,7 @@ else:
                 while len(lista_zdjec) < 6:
                     lista_zdjec.append(None)
                 
-                def render_photo(url, h=265):
+                def render_photo(url, h=266):
                     foto_ready = wyswietl_zdjecie(url, szerokosc=400, wysokosc=h)
                     if foto_ready:
                         st.image(foto_ready, width='stretch')
@@ -301,7 +335,7 @@ else:
                         )
                         
                 # WIERSZ 1
-                img_row_1 = st.columns([2, 1])
+                img_row_1 = st.columns([2, 1], gap="small")
                 with img_row_1[0]:
                     foto_duze = wyswietl_zdjecie(lista_zdjec[0], szerokosc=800, wysokosc=540)
                     if foto_duze:
@@ -310,12 +344,11 @@ else:
                         st.markdown("<div class='surface-block' style='height: 540px;'></div>", unsafe_allow_html=True)
                 
                 with img_row_1[1]:
-                    render_photo(lista_zdjec[1], h=265)
-                    render_photo(lista_zdjec[2], h=265)
-        
+                    render_photo(lista_zdjec[1], h=266)
+                    render_photo(lista_zdjec[2], h=266)
+
                 # WIERSZ 2
-                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                img_row_2 = st.columns([1, 1, 1])
+                img_row_2 = st.columns([1, 1, 1], gap="small")
                 with img_row_2[0]:
                     render_photo(lista_zdjec[3], h=260)
                 with img_row_2[1]:
@@ -333,10 +366,9 @@ else:
                     
             with col_side:
                 # PANEL OPINIE
-                opinie_box = st.container(border=True, height=350)
+                opinie_box = st.container(border=True, height=265)
 
                 with opinie_box:
-
                     text_color = st.config.get_option("theme.textColor") or "#262730"
 
                     # ===== HEADER =====
@@ -346,10 +378,10 @@ else:
                         justify-content: space-between; 
                         align-items: center; 
                         border-bottom: 1px solid #e0e0e0; 
-                        padding-bottom: 8px; 
+                        padding-bottom: 6px; 
                         margin-bottom: 8px;
                     ">
-                        <h3 style="margin: 0; font-family: sans-serif; font-size: 20px; color: {text_color};">
+                        <h3 style="margin: 0px; padding: 0px; font-family: sans-serif; font-size: 18px; color: {text_color}; line-height: 1;">
                             Opinie ({nocleg['liczba_opinii']})
                         </h3>
                         <div class='rating-chip' style="margin: 0;">
@@ -357,7 +389,7 @@ else:
                         </div>
                     </div>
                     """
-                    st.markdown(header_html, unsafe_allow_html=True)
+                    st.markdown(header_html, unsafe_allow_html=True) 
 
                     # ===== STATE =====
                     if "pokaz_wszystkie_opinie" not in st.session_state:
@@ -374,11 +406,9 @@ else:
                         st.info("Brak opinii dla tego obiektu.")
 
                     # ===== FULL LIST VIEW =====
-                    
                     elif st.session_state.pokaz_wszystkie_opinie:
-
                         # Dodany niezależny kontener z przewijaniem, by nagłówek i przycisk były nieruchome
-                        opinie_scroll = st.container(height=180, border=False)
+                        opinie_scroll = st.container(height=140, border=False)
 
                         with opinie_scroll:
                             for _, opinia in df_opinie.iterrows():
@@ -398,13 +428,9 @@ else:
 
                     # ===== CAROUSEL VIEW =====
                     else:
-
                         if df_opinie_z_komentarzem.empty:
                             st.info("Brak opinii z komentarzami.")
                         else:
-
-                            import html
-
                             opinie_list = df_opinie_z_komentarzem.to_dict(orient="records")
                             count = len(opinie_list)
 
@@ -415,10 +441,10 @@ else:
                                 komentarz = html.escape(str(op["komentarz"]))
 
                                 st.markdown(f"""
-                                <div style="padding:10px;">
+                                <div style="padding:5px 0px;">
                                     <strong>{op['ocena']}/5 ⭐</strong>
                                     <span style="color:gray;">({html.escape(str(op['imie']))})</span>
-                                    <div style="margin-top:6px; color:{text_color}; font-style:italic;">
+                                    <div style="margin-top:4px; color:{text_color}; font-style:italic;">
                                         {komentarz}
                                     </div>
                                 </div>
@@ -426,8 +452,7 @@ else:
 
                             # ===== CAROUSEL =====
                             else:
-
-                                czas_wyswietlania = 2.0
+                                czas_wyswietlania = 3.0
                                 czas_przejscia = 0.5
                                 czas_na_slajd = czas_wyswietlania + czas_przejscia
                                 laczny_czas = count * czas_na_slajd
@@ -439,7 +464,6 @@ else:
                                 slides_html = ""
 
                                 for i, op in enumerate(opinie_list):
-
                                     surowy = str(op.get("komentarz", "")).replace("\n", " ").replace("\r", "")
                                     czysty_komentarz = html.escape(surowy)
 
@@ -447,31 +471,14 @@ else:
 
                                     slides_html += f"""
                                     <div class="carousel-slide" style="animation-delay:{opoznienie}s;">
-                                        
-                                        <div style="
-                                            display:flex;
-                                            flex-direction:column;
-                                            justify-content:center;
-                                            height:100%;
-                                            padding:10px;
-                                        ">
-                                            <div style="font-size:1.2rem; margin-bottom:6px;">
+                                        <div style="display:flex; flex-direction:column; justify-content:center; height:100%; padding:5px 0px;">
+                                            <div style="font-size:1.1rem; margin-bottom:4px;">
                                                 <strong>{op['ocena']}/5 ⭐</strong>
                                             </div>
-
-                                            <div style="
-                                                color:{text_color};
-                                                font-size:1.05rem;
-                                                line-height:1.4;
-                                                display:-webkit-box;
-                                                -webkit-line-clamp:3;
-                                                -webkit-box-orient:vertical;
-                                                overflow:hidden;
-                                            ">
+                                            <div style="color:{text_color}; font-size:1rem; line-height:1.3; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
                                                 {czysty_komentarz}
                                             </div>
                                         </div>
-
                                     </div>
                                     """
 
@@ -480,13 +487,13 @@ else:
                                 .carousel-container {{
                                     position: relative;
                                     width: 100%;
-                                    height: 180px;
+                                    height: 140px;
                                     overflow: hidden;
                                 }}
 
                                 .carousel-slide {{
                                     position: absolute;
-                                    top: 35;
+                                    top: 0;
                                     left: 0;
                                     width: 100%;
                                     opacity: 0;
@@ -517,10 +524,10 @@ else:
                 # PANEL MAPA
                 map_box = st.container(border=True)
                 with map_box:
-                    if detail_map is not None:
-                        st_folium(detail_map, width='Stretch', height=400)
+                    if detail_map:
+                        folium_static(detail_map, width='Stretch', height=323)
                     else:
-                        st.markdown("<div class='text-muted' style='align: center; padding: 40px 0;'>[ Miejsce na mapę ]</div>", unsafe_allow_html=True)
+                        st.markdown("<div class='text-muted' style='text-align: center; padding: 40px 0;'>Brak mapy</div>", unsafe_allow_html=True)
     except Exception as e:
         st.error(f"Nie udało się załadować danych noclegu. Błąd: {e}")
 
