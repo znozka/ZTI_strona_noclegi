@@ -246,13 +246,32 @@ with search_container:
     c1, c2, c3, c4, c5 = st.columns([2.5, 1.2, 1.2, 1.2, 1])
     
     with c1:
+        # pobieramy aktualne miasto z pamięci sesji
+        zapisane_miejsce = st.session_state.get("search_miejsce", "")
+        
+        # tworzymy nową listę opcji: na samym początku doklejamy pusty ciąg znaków ""
+        opcje_miast = [""] + [m for m in lista_miast if m != ""]
+        
+        # wyliczamy indeks startowy. Jeśli w pamięci jest miasto, wskazujemy na nie.
+        if zapisane_miejsce in opcje_miast:
+            domyslny_indeks = opcje_miast.index(zapisane_miejsce)
+        else:
+            domyslny_indeks = 0
+
+        # renderujemy selectbox, używamy format_func, aby pusty ciąg "" wyświetlał się użytkownikowi jako opcja resetu
         miejsce_input = st.selectbox(
             "Miejsce", 
-            options=lista_miast,
+            options=opcje_miast,
             index=domyslny_indeks,
-            placeholder="Wpisz miasto...", 
+            format_func=lambda x: "Gdziekolwiek" if x == "" else x,
             label_visibility="visible"
         )
+        
+        # reakcja na kliknięcie - jeśli użytkownik rozwinął listę i kliknął opcję "Gdziekolwiek" (czyli miejsce_input stało się ""), a w tle wciąż wiszą wyniki dla starego miasta:
+        if miejsce_input == "" and zapisane_miejsce != "":
+            st.session_state.search_miejsce = ""  # czyścimy pamięć aktywną
+            st.query_params["miejsce"] = ""       # czyścimy parametr z paska URL
+            st.rerun()                            # odświeżamy stronę, by od razu pokazać noclegi ze wszystkich miast
     with c2:
         data_od_input = st.date_input("Data od", value=st.session_state.search_data_od)
     with c3:
@@ -554,7 +573,7 @@ with panel_wynikow:
         else:
             search_map = build_search_map(df_wyniki)
             
-            if search_map is not None:
+            if search_map:
                 with sidebar_map_container:
                     st.markdown("#### Lokalizacja ofert")
                     folium_static(search_map, width='Stretch', height=280)
