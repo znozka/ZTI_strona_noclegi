@@ -1,11 +1,30 @@
 import streamlit as st
 import datetime
+import requests
 import pandas as pd
 import folium
+import logging
+import warnings
 from streamlit_folium import folium_static
 from urllib.parse import urlencode
 from src.ui import render_page_header, render_page_footer
 from src.utils import wyswietl_zdjecie
+
+# ukrycie ostrzeżeń w konsoli
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# filtr usuwający komunikat Streamlita o st.components
+class WyciszKomponentyFilter(logging.Filter):
+    def filter(self, record):
+        # jeśli log zawiera wzmiankę o st.components.v1.html, wyrzuć go
+        return "st.components.v1.html" not in record.getMessage()
+
+# nakładamy filtr na absolutnie wszystkie loggery powiązane ze Streamlitem
+for logger_name in list(logging.Logger.manager.loggerDict.keys()):
+    if "streamlit" in logger_name:
+        logger = logging.getLogger(logger_name)
+        logger.addFilter(WyciszKomponentyFilter())
+        logger.setLevel(logging.ERROR)
 
 # Ustawienia strony
 st.set_page_config(
@@ -20,6 +39,202 @@ render_page_header()
 st.markdown("### Przeglądaj dostępne oferty noclegów")
 
 conn = st.connection("azure_sql", type="sql")
+
+# pogoda
+WSPOLRZEDNE_MIAST = {
+    "Gdańsk": (54.3520, 18.6466),
+    "Kraków": (50.0614, 19.9366),
+    "Katowice": (50.2649, 19.0238),
+    "Poznań": (52.4064, 16.9252),
+    "Warszawa": (52.2297, 21.0122),
+    "Wrocław": (51.1079, 17.0385),
+    "Łódź": (51.7592, 19.4560),
+}
+
+# definicje kategorii pogodowych - każda to funkcja oceniająca listę dziennych podsumowań (df_summary)
+# zwraca True/False, czy dany zestaw dni spełnia warunek.
+# każde "podsumowanie dnia" to słownik zgodny ze strukturą odpowiedzi /onecall/day_summary.
+WEATHER_CATEGORIES = {
+    "upalne_wakacje": {
+        "label": "☀️ Upalne wakacje",
+        "opis": "każdego dnia ponad 25°C w ciągu dnia",
+        "check": lambda dni: all(d["temperature"]["afternoon"] > 25 for d in dni),
+    },
+    "przyjemnie_cieplo": {
+        "label": "🌤️ Przyjemnie ciepło",
+        "opis": "każdego dnia ponad 20°C w ciągu dnia",
+        "check": lambda dni: all(d["temperature"]["afternoon"] > 20 for d in dni),
+    },
+    "bez_deszczu": {
+        "label": "🌂 Bez deszczu",
+        "opis": "minimalne ryzyko opadów przez cały pobyt",
+        "check": lambda dni: (sum(d["precipitation"]["total"] for d in dni) / max(1, len(dni))) < 1,
+    },
+    "ciepłe_wieczory": {
+        "label": "🌇 Ciepłe wieczory",
+        "opis": "każdego wieczoru ponad 20°C - idealnie na kolację na zewnątrz",
+        "check": lambda dni: all(d["temperature"]["evening"] > 20 for d in dni),
+    },
+    "slonecznie": {
+        "label": "🌞 Słonecznie",
+        "opis": "niskie zachmurzenie - duża szansa na słońce",
+        "check": lambda dni: (sum(d["cloud_cover"]["afternoon"] for d in dni) / max(1, len(dni))) < 40,
+    },
+    "bez_wiatru": {
+        "label": "🍃 Bezwietrznie",
+        "opis": "wiatr nie przekracza 5 m/s przez cały pobyt",
+        "check": lambda dni: all(d["wind"]["max"]["speed"] <= 5 for d in dni),
+    },
+    "chlodniej": {
+        "label": "❄️ Chłodniej",
+        "opis": "w dzień nie więcej niż 20°C - dla lubiących chłodniejszą pogodę",
+        "check": lambda dni: all(d["temperature"]["afternoon"] <= 20 for d in dni),
+    },
+}
+
+MAX_DNI_SPRAWDZANYCH = 5  # ograniczenie liczby zapytań API na pobyt
+
+def wygeneruj_daty_do_sprawdzenia(data_od, data_do, maks_dni=MAX_DNI_SPRAWDZANYCH):
+    """Zwraca listę dat (max maks_dni) równomiernie rozłożonych w okresie pobytu."""
+    liczba_nocy = max(1, (data_do - data_od).days)
+    wszystkie_daty = [data_od + datetime.timedelta(days=i) for i in range(liczba_nocy)]
+
+    if len(wszystkie_daty) <= maks_dni:
+        return wszystkie_daty
+
+    # równomierne próbkowanie maks_dni dat z całego zakresu pobytu
+    krok = (len(wszystkie_daty) - 1) / (maks_dni - 1)
+    indeksy = sorted(set(round(i * krok) for i in range(maks_dni)))
+    return [wszystkie_daty[i] for i in indeksy]
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def pobierz_pogode_dnia(lat, lon, data_iso):
+    """Pojedyncze zapytanie do OpenWeatherMap day_summary."""
+    try:
+        api_key = st.secrets.api_keys["API_KEY_OPENWEATHER"]
+    except Exception:
+        return None
+
+    url = "https://api.openweathermap.org/data/3.0/onecall/day_summary"
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "date": data_iso,
+        "appid": api_key,
+        "units": "metric",
+        "lang": "pl",
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=5)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception:
+        pass
+    return None
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def pobierz_prognoze_dla_miasta(miasto, data_od_iso, data_do_iso):
+    """
+    Pobiera podsumowania pogodowe (max MAX_DNI_SPRAWDZANYCH dni) dla danego miasta
+    i zwraca listę słowników day_summary (tylko udane odpowiedzi).
+    """
+    if miasto not in WSPOLRZEDNE_MIAST:
+        return []
+
+    lat, lon = WSPOLRZEDNE_MIAST[miasto]
+    data_od = datetime.date.fromisoformat(data_od_iso)
+    data_do = datetime.date.fromisoformat(data_do_iso)
+
+    daty = wygeneruj_daty_do_sprawdzenia(data_od, data_do)
+
+    wyniki = []
+    for d in daty:
+        dane = pobierz_pogode_dnia(lat, lon, d.isoformat())
+        if dane:
+            wyniki.append(dane)
+    return wyniki
+
+def miasto_spelnia_kategorie(miasto, data_od_iso, data_do_iso, wybrane_kategorie):
+    """Sprawdza czy dla danego miasta i zakresu dat spełnione są WSZYSTKIE wybrane kategorie pogodowe (AND)."""
+    if not wybrane_kategorie:
+        return True
+
+    dni = pobierz_prognoze_dla_miasta(miasto, data_od_iso, data_do_iso)
+    if not dni:
+        return False
+
+    for klucz_kat in wybrane_kategorie:
+        funkcja_check = WEATHER_CATEGORIES[klucz_kat]["check"]
+        try:
+            if not funkcja_check(dni):
+                return False
+        except Exception:
+            return False
+
+    return True
+
+@st.fragment
+def renderuj_panel_pogody(version):
+    # sprawdzamy, czy użytkownik szuka "Gdziekolwiek" lub nie wpisał nic
+    aktywne_miejsce = st.session_state.get("search_miejsce", "")
+    if aktywne_miejsce is None:
+        aktywne_miejsce = ""
+
+    pokaz_filtr_pogodowy = aktywne_miejsce.strip() == "" or aktywne_miejsce.strip().lower() == "gdziekolwiek"
+
+    if pokaz_filtr_pogodowy:
+        if "aktywna_pogoda" not in st.session_state:
+            zapisane_kategorie_str_init = url_filters["pogoda"]
+            st.session_state.aktywna_pogoda = (
+                [k for k in zapisane_kategorie_str_init.split(",") if k]
+                if zapisane_kategorie_str_init else []
+            )
+
+        weather_card = st.container(border=True)
+        with weather_card:
+            st.markdown("#### Dopasuj podróż do pogody!")
+
+            klucze_kategorii = list(WEATHER_CATEGORIES.keys())
+            etykieta_do_klucza = {f"{v['label']} - {v['opis']}": k for k, v in WEATHER_CATEGORIES.items()}
+            klucz_do_etykiety = {k: f"{v['label']} - {v['opis']}" for k, v in WEATHER_CATEGORIES.items()}
+
+            wybrane_etykiety_robocze = st.multiselect(
+                "Warunki pogodowe",
+                options=[klucz_do_etykiety[k] for k in klucze_kategorii],
+                default=[klucz_do_etykiety[k] for k in st.session_state.aktywna_pogoda if k in WEATHER_CATEGORIES],
+                placeholder="Wybierz opcje",
+                key=f"pogoda_multi_{version}",
+                label_visibility="collapsed",
+            )
+
+            col_left, col_center, col_right = st.columns([3, 1, 3])
+            with col_center:
+                zastosuj_pogode = st.button("Zastosuj filtr pogodowy", type="secondary", use_container_width=True)
+
+            if zastosuj_pogode:
+                st.session_state.aktywna_pogoda = [etykieta_do_klucza[e] for e in wybrane_etykiety_robocze]
+                st.query_params["pogoda"] = ",".join(st.session_state.aktywna_pogoda)
+                # Wywołanie st.rerun() WEWNĄTRZ fragmentu spowoduje przeładowanie JUŻ CAŁEJ strony
+                st.rerun()
+
+            # dynamiczne wyświetlanie miast (działa płynnie bez dotykania mapy!)
+            wybrane_kategorie_pogody = wybrane_etykiety_robocze
+            if wybrane_kategorie_pogody and "search_data_od" in st.session_state and "search_data_do" in st.session_state:
+                klucze_robocze = [etykieta_do_klucza[e] for e in wybrane_kategorie_pogody]
+                data_od_iso = str(st.session_state.search_data_od)
+                data_do_iso = str(st.session_state.search_data_do)
+                
+                pasujace_miasta = [
+                    miasto for miasto in WSPOLRZEDNE_MIAST.keys()
+                    if miasto_spelnia_kategorie(miasto, data_od_iso, data_do_iso, klucze_robocze)
+                ]
+                
+                if pasujace_miasta:
+                    st.info(f"**Dostępne miasta dla tej pogody:** {', '.join(pasujace_miasta)}")
+                else:
+                    st.error("**Brak miast** spełniających wybrane warunki pogodowe w tych datach.")
+    else:
+        st.session_state.aktywna_pogoda = []
 
 # pobieranie najwyższej ceny dla bieżących kryteriów wyszukiwania
 def pobierz_najwyzsza_cene(miejsce, osoby):
@@ -219,6 +434,7 @@ url_filters = {
     "u_lozeczko": pobierz_filtr("u_lozeczko", False, lambda x: x == "True" or x is True),
     "u_winda": pobierz_filtr("u_winda", False, lambda x: x == "True" or x is True),
     "u_basen": pobierz_filtr("u_basen", False, lambda x: x == "True" or x is True),
+    "pogoda": pobierz_filtr("pogoda", "", lambda x: x),
 }
 
 domyslny_indeks = None
@@ -295,7 +511,11 @@ with search_container:
             if "saved_filters" in st.session_state:
                 st.session_state.saved_filters.pop("cena_min", None)
                 st.session_state.saved_filters.pop("cena_max", None)
-            
+
+            # nowe wyszukiwanie (inne miasto/daty) unieważnia poprzednią prognozę pogody, więc czyścimy aktywny filtr pogodowy - użytkownik musi go zatwierdzić ponownie
+            st.session_state.aktywna_pogoda = []
+            if "pogoda" in st.query_params: del st.query_params["pogoda"]
+
             st.session_state.filters_version += 1
             st.session_state.search_clicked = True
             st.session_state.search_miejsce = czyste_miejsce
@@ -303,6 +523,12 @@ with search_container:
             st.session_state.search_data_od = data_od_input
             st.session_state.search_data_do = data_do_input
             st.rerun()
+
+# karta filtra pogodowego
+renderuj_panel_pogody(version)
+
+# pobierasz wynik do dalszego filtrowania bazy danych / DataFrame poniżej
+wybrane_kategorie_pogody = st.session_state.get("aktywna_pogoda", [])
 
 # Layout dolny
 panel_filtrow, panel_wynikow = st.columns([1, 3])
@@ -407,12 +633,14 @@ with panel_filtrow:
             "f_schronisko", "f_wynajem", "f_p_darmowy", "f_p_platny", "f_p_brak",
             "u_klimatyzacja", "u_przyjazny_dzieciom", "u_kuchnia", "u_wifi", "u_sniadanie",
             "u_zwierzeta", "u_fitness", "u_bar", "u_restauracja", "u_transfer", "u_wozki",
-            "u_niepalacy", "u_pralnia", "u_balkon", "u_lozeczko", "u_winda", "u_basen"
+            "u_niepalacy", "u_pralnia", "u_balkon", "u_lozeczko", "u_winda", "u_basen",
+            "pogoda",
         ]
         for klucz in klucze_filtrow:
             if klucz in st.query_params: del st.query_params[klucz]
         st.session_state.filters_version += 1
         st.session_state.saved_filters = {}
+        st.session_state.aktywna_pogoda = []  # czyścimy też zatwierdzony filtr pogodowy
         st.rerun()
 
 st.session_state.saved_filters = {
@@ -424,7 +652,8 @@ st.session_state.saved_filters = {
     "u_sniadanie": u_sniadanie, "u_zwierzeta": u_zwierzeta, "u_fitness": u_fitness,
     "u_bar": u_bar, "u_restauracja": u_restauracja, "u_transfer": u_transfer,
     "u_wozki": u_wozki, "u_niepalacy": u_niepalacy, "u_pralnia": u_pralnia,
-    "u_balkon": u_balkon, "u_lozeczko": u_lozeczko, "u_winda": u_winda, "u_basen": u_basen
+    "u_balkon": u_balkon, "u_lozeczko": u_lozeczko, "u_winda": u_winda, "u_basen": u_basen,
+    "pogoda": ",".join(wybrane_kategorie_pogody),
 }
 
 with panel_wynikow:
@@ -567,7 +796,26 @@ with panel_wynikow:
     
     try:
         df_wyniki = conn.query(query_szukaj, params=sql_params, ttl=0)
-        
+
+        # filtrowanie wyników po pogodzie
+        if not df_wyniki.empty and wybrane_kategorie_pogody:
+            data_od_iso = str(st.session_state.search_data_od)
+            data_do_iso = str(st.session_state.search_data_do)
+
+            # cache wyników per-miasto w obrębie tego przebiegu strony, żeby nie sprawdzać tego samego miasta wielokrotnie
+            wynik_pogody_per_miasto = {}
+
+            def sprawdz_wiersz(miasto):
+                if miasto not in wynik_pogody_per_miasto:
+                    wynik_pogody_per_miasto[miasto] = miasto_spelnia_kategorie(
+                        miasto, data_od_iso, data_do_iso, wybrane_kategorie_pogody
+                    )
+                return wynik_pogody_per_miasto[miasto]
+
+            with st.spinner("Sprawdzam prognozę pogody dla wyników..."):
+                maska_pogody = df_wyniki["lokalizacja_miasto"].apply(sprawdz_wiersz)
+            df_wyniki = df_wyniki[maska_pogody]
+
         if df_wyniki.empty:
             st.info("Brak dostępnych ofert dla wybranych kryteriów.")
         else:

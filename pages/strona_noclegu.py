@@ -3,9 +3,27 @@ import datetime
 import pandas as pd
 import folium
 import html
+import logging
+import warnings
 from streamlit_folium import folium_static
 from src.ui import render_page_header, render_page_footer
 from src.utils import wyswietl_zdjecie
+
+# ukrycie ostrzeżeń w konsoli
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# filtr usuwający komunikat Streamlita o st.components
+class WyciszKomponentyFilter(logging.Filter):
+    def filter(self, record):
+        # jeśli log zawiera wzmiankę o st.components.v1.html, wyrzuć go
+        return "st.components.v1.html" not in record.getMessage()
+
+# nakładamy filtr na absolutnie wszystkie loggery powiązane ze Streamlitem
+for logger_name in list(logging.Logger.manager.loggerDict.keys()):
+    if "streamlit" in logger_name:
+        logger = logging.getLogger(logger_name)
+        logger.addFilter(WyciszKomponentyFilter())
+        logger.setLevel(logging.ERROR)
 
 # 1. Odzyskanie i walidacja ID noclegu
 if "id" in st.query_params:

@@ -33,7 +33,7 @@ def render_page_header(label: str = "InnSight") -> None:
     target_page = "pages/konto.py" if user_name else "pages/login.py"
 
     # Dodane dwie węższe kolumny na nowe przyciski na końcu paska
-    col_logo, col_spacer, col_login, col_api, col_db = st.columns([1, 2.5, 1, 0.3, 0.5])
+    col_logo, col_spacer, col_login, col_db = st.columns([1, 2.5, 1, 0.1])
     
     with col_logo:
         st.image("assets/images/logo.svg", width=150) 
@@ -49,12 +49,8 @@ def render_page_header(label: str = "InnSight") -> None:
                 st.session_state["going_to_login"] = True
             st.switch_page(target_page)
 
-    with col_api:
-        if st.button("temp Testy API", key="header_api_btn", width='stretch'):
-            st.switch_page("pages/testy_api.py")
-
     with col_db:
-        if st.button("temp Podgląd tabel", key="header_db_btn", width='stretch'):
+        if st.button("tabele", key="header_db_btn", width='stretch'):
             st.switch_page("pages/db_tables.py")
             
 def render_page_footer() -> None:
