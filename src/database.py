@@ -277,3 +277,278 @@ def hash_password(password: str) -> str:
     """
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+
+# =========================================================================
+# FUNKCJE DLA STRONY "MOJE KONTO"
+# =========================================================================
+
+def get_user_profile(conn, user_id):
+    """
+    Pobiera profil użytkownika na podstawie jego ID.
+    Zwraca Series z danymi: id_uzytkownika, email, imie, nazwisko, telefon, rola, data_rejestracji
+    """
+    user_id = int(user_id)
+    query = """
+        SELECT id_uzytkownika, email, imie, nazwisko, telefon, rola, data_rejestracji
+        FROM uzytkownicy
+        WHERE id_uzytkownika = :user_id
+    """
+    df = conn.query(query, params={"user_id": user_id}, ttl=0)
+    return df.iloc[0] if not df.empty else None
+
+
+def get_user_reservations(conn, user_id):
+    """
+    Pobiera wszystkie rezerwacje użytkownika wraz z informacjami o noclegu.
+    Zwraca DataFrame: id_rezerwacji, nazwa noclegu, miasto, data zamelowania, 
+    data wyjazdowania, liczba gości, cena całkowita, status
+    """
+    user_id = int(user_id)
+    query = """
+        SELECT 
+            r.id_rezerwacji,
+            n.id_noclegu,
+            n.nazwa AS nazwa_noclegu,
+            n.lokalizacja_miasto,
+            n.lokalizacja_adres,
+            n.cena_za_noc,
+            r.data_zameldowania,
+            r.data_wymeldowania,
+            r.liczba_gosci,
+            r.calkowita_cena,
+            r.status,
+            r.data_utworzenia
+        FROM rezerwacje r
+        JOIN noclegi n ON r.id_noclegu = n.id_noclegu
+        WHERE r.id_turysty = :user_id
+        ORDER BY r.data_wymeldowania DESC
+    """
+    df = conn.query(query, params={"user_id": user_id}, ttl=0)
+    return df if not df.empty else pd.DataFrame()
+
+
+def get_reservation_details(conn, reservation_id):
+    """
+    Pobiera szczegóły konkretnej rezerwacji.
+    """
+    query = """
+        SELECT 
+            r.id_rezerwacji,
+            r.id_turysty,
+            r.id_noclegu,
+            n.nazwa AS nazwa_noclegu,
+            n.lokalizacja_miasto,
+            n.lokalizacja_adres,
+            n.opis,
+            n.typ_obiektu,
+            r.data_zameldowania,
+            r.data_wymeldowania,
+            r.liczba_gosci,
+            r.calkowita_cena,
+            r.status,
+            r.data_utworzenia
+        FROM rezerwacje r
+        JOIN noclegi n ON r.id_noclegu = n.id_noclegu
+        WHERE r.id_rezerwacji = :reservation_id
+    """
+    df = conn.query(query, params={"reservation_id": reservation_id}, ttl=0)
+    return df.iloc[0] if not df.empty else None
+
+
+def get_user_opinions(conn, user_id):
+    """
+    Pobiera wszystkie opinie wystawione przez użytkownika.
+    Zwraca DataFrame: id_opinii, nazwa noclegu, miasta, ocena, komentarz, 
+    data_dodania, czy_edytowana, data_modyfikacji, id_rezerwacji
+    """
+    user_id = int(user_id)
+    query = """
+        SELECT 
+            o.id_opinii,
+            o.id_rezerwacji,
+            o.ocena,
+            o.komentarz,
+            o.data_dodania,
+            o.data_modyfikacji,
+            o.czy_edytowana,
+            n.id_noclegu,
+            n.nazwa AS nazwa_noclegu,
+            n.lokalizacja_miasto,
+            r.data_zameldowania,
+            r.data_wymeldowania
+        FROM opinie o
+        JOIN rezerwacje r ON o.id_rezerwacji = r.id_rezerwacji
+        JOIN noclegi n ON o.id_noclegu = n.id_noclegu
+        WHERE o.id_turysty = :user_id
+        ORDER BY o.data_dodania DESC
+    """
+    df = conn.query(query, params={"user_id": user_id}, ttl=0)
+    return df if not df.empty else pd.DataFrame()
+
+
+def can_edit_opinion(conn, opinion_id):
+    """
+    Sprawdza czy opinię można jeszcze edytować.
+    ⚠️ OGRANICZENIE: Opinię można edytować maksymalnie do 1 ROKU po jej wystawieniu
+    
+    Zwraca: (True/False, liczba_dni_do_wygaśnięcia)
+    """
+    opinion_id = int(opinion_id)
+    query = """
+        SELECT data_dodania
+        FROM opinie
+        WHERE id_opinii = :opinion_id
+    """
+    df = conn.query(query, params={"opinion_id": opinion_id}, ttl=0)
+    
+    if df.empty:
+        return False, 0
+    
+    data_dodania = pd.to_datetime(df.iloc[0]["data_dodania"])
+    data_dzisiaj = pd.Timestamp.now()
+    
+    # ⚠️ TUTAJ JEST OGRANICZENIE: można edytować przez 365 dni od wystawienia opinii
+    data_graniczna = data_dodania + pd.Timedelta(days=365)
+    
+    if data_dzisiaj <= data_graniczna:
+        dni_pozostale = (data_graniczna - data_dzisiaj).days
+        return True, dni_pozostale
+    else:
+        return False, 0
+
+
+def update_opinion(conn, opinion_id, new_rating, new_comment):
+    """
+    Aktualizuje opinię użytkownika (ocena i komentarz).
+    Zapisuje historię poprzedniej wersji w tabeli historia_opinii.
+    Aktualizuje flagi: czy_edytowana=1, data_modyfikacji=GETDATE()
+    
+    ⚠️ OGRANICZENIE: Najpierw sprawdza czy można edytować (do 1 roku)
+    Zwraca: (True/False, komunikat)
+    """
+    opinion_id = int(opinion_id)
+    # Najpierw sprawdzamy czy można edytować
+    can_edit, dni_pozostale = can_edit_opinion(conn, opinion_id)
+    if not can_edit:
+        return False, "❌ Okres do edycji opinii upłynął (maksymalnie do 1 roku po wystawieniu)"
+    
+    try:
+        with conn.session as session:
+            # Pobierz stare dane opinii
+            old_opinion = session.execute(
+                text("""
+                    SELECT ocena, komentarz 
+                    FROM opinie 
+                    WHERE id_opinii = :opinion_id
+                """),
+                {"opinion_id": opinion_id}
+            ).fetchone()
+            
+            if not old_opinion:
+                return False, "❌ Opinia nie znaleziona"
+            
+            stara_ocena, stary_komentarz = old_opinion
+            
+            # Zapisz historię
+            session.execute(
+                text("""
+                    INSERT INTO historia_opinii (id_opinii, stara_ocena, stary_komentarz)
+                    VALUES (:opinion_id, :stara_ocena, :stary_komentarz)
+                """),
+                {"opinion_id": opinion_id, "stara_ocena": stara_ocena, "stary_komentarz": stary_komentarz}
+            )
+            
+            # Aktualizuj opinię
+            session.execute(
+                text("""
+                    UPDATE opinie 
+                    SET ocena = :ocena, 
+                        komentarz = :komentarz,
+                        data_modyfikacji = GETDATE(),
+                        czy_edytowana = 1
+                    WHERE id_opinii = :opinion_id
+                """),
+                {"ocena": new_rating, "komentarz": new_comment, "opinion_id": opinion_id}
+            )
+            
+            session.commit()
+            return True, f"✅ Opinia zaktualizowana. Możesz ją edytować jeszcze przez {dni_pozostale} dni"
+    
+    except Exception as e:
+        return False, f"❌ Błąd bazy danych: {str(e)}"
+
+
+def delete_opinion(conn, opinion_id):
+    """
+    Usuwa opinię użytkownika wraz z historią.
+    Zwraca: (True/False, komunikat)
+    """
+    opinion_id = int(opinion_id)
+    try:
+        with conn.session as session:
+            # Najpierw usuń historię
+            session.execute(
+                text("DELETE FROM historia_opinii WHERE id_opinii = :opinion_id"),
+                {"opinion_id": opinion_id}
+            )
+            
+            # Potem usuń samą opinię
+            session.execute(
+                text("DELETE FROM opinie WHERE id_opinii = :opinion_id"),
+                {"opinion_id": opinion_id}
+            )
+            
+            session.commit()
+            return True, "✅ Opinia usunięta"
+    
+    except Exception as e:
+        return False, f"❌ Błąd bazy danych: {str(e)}"
+
+
+def update_user_profile(conn, user_id, telefon):
+    """
+    Aktualizuje profil użytkownika (telefon).
+    Zwraca: (True/False, komunikat)
+    """
+    user_id = int(user_id)
+    try:
+        with conn.session as session:
+            session.execute(
+                text("""
+                    UPDATE uzytkownicy 
+                    SET telefon = :telefon
+                    WHERE id_uzytkownika = :user_id
+                """),
+                {"telefon": telefon, "user_id": user_id}
+            )
+            session.commit()
+            return True, "✅ Profil zaktualizowany"
+    
+    except Exception as e:
+        return False, f"❌ Błąd bazy danych: {str(e)}"
+
+
+def update_user_info(conn, user_id, imie, nazwisko, telefon):
+    """
+    Aktualizuje pełne dane profilu użytkownika (imię, nazwisko, telefon).
+    Zwraca: (True/False, komunikat)
+    """
+    user_id = int(user_id)
+    try:
+        with conn.session as session:
+            session.execute(
+                text("""
+                    UPDATE uzytkownicy 
+                    SET imie = :imie, 
+                        nazwisko = :nazwisko,
+                        telefon = :telefon
+                    WHERE id_uzytkownika = :user_id
+                """),
+                {"imie": imie, "nazwisko": nazwisko, "telefon": telefon, "user_id": user_id}
+            )
+            session.commit()
+            return True, "✅ Dane zaktualizowane"
+    
+    except Exception as e:
+        return False, f"❌ Błąd bazy danych: {str(e)}"
