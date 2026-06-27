@@ -94,4 +94,26 @@ with cent_co:
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
+st.markdown(
+    """
+    <style>
+        .custom-footer {
+            position: fixed !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .block-container {
+            padding-bottom: 110px !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 render_page_footer()

@@ -552,3 +552,65 @@ def update_user_info(conn, user_id, imie, nazwisko, telefon):
     
     except Exception as e:
         return False, f"❌ Błąd bazy danych: {str(e)}"
+    
+import pandas as pd
+def get_user_reservations(user_id, conn):
+    query = """
+    SELECT id_rezerwacji, nazwa, data_zameldowania, data_wymeldowania, status, calkowita_cena
+    FROM rezerwacje
+    WHERE id_turysty = ?
+    """
+    # W conn.query przekazujemy tylko zapytanie i parametry (bez przekazywania samego obiektu conn)
+    return conn.query(query, params=[user_id])
+
+def get_user_opinions(user_id, conn):
+    query = "SELECT * FROM opinie WHERE id_turysty = ?"
+    return conn.query(query, params=[user_id])
+
+def can_edit_opinion(opinion_id, user_id, conn):
+    query = "SELECT id_opinii FROM opinie WHERE id_opinii = ? AND id_turysty = ?"
+    result = conn.query(query, params=[opinion_id, user_id])
+    return not result.empty
+
+def update_opinion(opinion_id, new_rating, new_comment, conn):
+    with conn.session as s:
+        s.execute(
+            "UPDATE opinie SET ocena = ?, komentarz = ?, data_modyfikacji = GETDATE(), czy_edytowana = 1 WHERE id_opinii = ?",
+            (new_rating, new_comment, opinion_id)
+        )
+        s.commit()
+
+def delete_opinion(opinion_id, conn):
+    with conn.session as s:
+        s.execute("DELETE FROM opinie WHERE id_opinii = ?", (opinion_id,))
+        s.commit()
+
+def get_user_profile(user_id, conn):
+    query = "SELECT imie, nazwisko, telefon, email FROM uzytkownicy WHERE id_uzytkownika = ?"
+    result = conn.query(query, params=[user_id])
+    if not result.empty:
+        # Konwersja wiersza DataFrame na słownik
+        return result.iloc[0].to_dict()
+    return None
+
+def update_user_info(user_id, imie, nazwisko, telefon, conn):
+    with conn.session as s:
+        s.execute(
+            "UPDATE uzytkownicy SET imie = ?, nazwisko = ?, telefon = ? WHERE id_uzytkownika = ?",
+            (imie, nazwisko, telefon, user_id)
+        )
+        s.commit()
+
+def verify_and_update_password(user_id, old_pass, new_pass, conn):
+    # Pobieramy hasło bezpośrednio przez query
+    query = "SELECT haslo_hash FROM uzytkownicy WHERE id_uzytkownika = ?"
+    result = conn.query(query, params=[user_id])
+    
+    if not result.empty:
+        stored_hash = result.iloc[0]['haslo_hash']
+        if stored_hash == old_pass:  # Pamiętaj o użyciu bcrypt w przyszłości!
+            with conn.session as s:
+                s.execute("UPDATE uzytkownicy SET haslo_hash = ? WHERE id_uzytkownika = ?", (new_pass, user_id))
+                s.commit()
+            return True
+    return False
