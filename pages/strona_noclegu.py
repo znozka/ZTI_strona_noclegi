@@ -5,6 +5,7 @@ import folium
 import html
 import logging
 import warnings
+from sqlalchemy import text
 from streamlit_folium import folium_static
 from src.ui import render_page_header, render_page_footer
 from src.utils import wyswietl_zdjecie
@@ -381,6 +382,11 @@ else:
                     st.write(nocleg['opis'])
                 else:
                     st.write("Brak opisu.")
+
+                st.markdown("---")
+                st.markdown('##### Decyzja podjęta?')
+                if st.button("Przejdź do rezerwacji"):
+                    st.switch_page("pages/rezerwacja_noclegu.py")
                     
             with col_side:
                 # PANEL OPINIE
@@ -546,6 +552,34 @@ else:
                         folium_static(detail_map, width='Stretch', height=323)
                     else:
                         st.markdown("<div class='text-muted' style='text-align: center; padding: 40px 0;'>Brak mapy</div>", unsafe_allow_html=True)
+                # UDOGODNIENIA
+                try:
+                    query_udogodnienia = """
+                        SELECT u.nazwa
+                        FROM udogodnienia u
+                        JOIN noclegi_udogodnienia nu ON u.id_udogodnienia = nu.id_udogodnienia
+                        WHERE nu.id_noclegu = :id_noclegu
+                    """
+                    with conn.session as session:
+                        rows = session.execute(text(query_udogodnienia), {"id_noclegu": int(selected_id)}).fetchall()
+                        lista_udogodnien = [row[0] for row in rows]
+                except Exception as e:
+                    lista_udogodnien = []
+                    st.error(f"Błąd pobierania udogodnień: {e}")
+
+                amenities_box = st.container(border=True)
+                with amenities_box:
+                    st.markdown("##### Udogodnienia obiektu")
+
+                    if lista_udogodnien:
+                        html_output = "<div style='display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-bottom: 12px;'>"
+                        for amenity in lista_udogodnien:
+                            html_output += f"<span style='display: inline-block; background-color: #f0f2f6; color: #31333f; padding: 6px 14px; border-radius: 16px; font-size: 14px; border: 1px solid #d3d3d3; font-family: sans-serif; white-space: nowrap; margin-bottom: 4px;'>{amenity}</span>"
+                        
+                        html_output += "</div>"
+                        st.markdown(html_output, unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div class='text-muted' style='font-size: 14px;'>Brak informacji o udogodnieniach.</div>", unsafe_allow_html=True)
     except Exception as e:
         st.error(f"Nie udało się załadować danych noclegu. Błąd: {e}")
 
