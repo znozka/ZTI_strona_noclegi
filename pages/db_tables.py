@@ -38,34 +38,34 @@ except Exception as e:
 
 st.markdown("---")
 
-st.subheader("zdjecia_noclegu (ostatnie 100)")
-query_zdjecia = """SELECT * FROM zdjecia_noclegu"""
+# st.subheader("zdjecia_noclegu (ostatnie 100)")
+# query_zdjecia = """SELECT * FROM zdjecia_noclegu"""
 
-try:
-    df_zdjecia = conn.query(query_zdjecia, ttl=0) # ttl=0 aby zawsze widzieć świeże dane
+# try:
+#     df_zdjecia = conn.query(query_zdjecia, ttl=0) # ttl=0 aby zawsze widzieć świeże dane
     
-    if df_zdjecia.empty:
-        st.info("Tabela 'zdjecia_noclegu' jest pusta.")
-    else:
-        df_display = df_zdjecia.tail(100).copy()
+#     if df_zdjecia.empty:
+#         st.info("Tabela 'zdjecia_noclegu' jest pusta.")
+#     else:
+#         df_display = df_zdjecia.tail(100).copy()
         
-        with st.spinner("Generuję miniatury"):
-            df_display["url_zdjecia"] = df_display["url_zdjecia"].apply(wyswietl_zdjecie)
+#         with st.spinner("Generuję miniatury"):
+#             df_display["url_zdjecia"] = df_display["url_zdjecia"].apply(wyswietl_zdjecie)
         
-        st.dataframe(
-            df_display,
-            width='stretch',
-            hide_index=True,
-            column_config={
-                "id_zdjecia": "id_zdjecia",
-                "id_noclegu": "id_noclegu",
-                "url_zdjecia": st.column_config.ImageColumn("podgląd"),
-                "czy_glowne": "czy_glowne"
-            }
-        )
+#         st.dataframe(
+#             df_display,
+#             width='stretch',
+#             hide_index=True,
+#             column_config={
+#                 "id_zdjecia": "id_zdjecia",
+#                 "id_noclegu": "id_noclegu",
+#                 "url_zdjecia": st.column_config.ImageColumn("podgląd"),
+#                 "czy_glowne": "czy_glowne"
+#             }
+#         )
             
-except Exception as e:
-    st.error(f"Nie udało się pobrać danych z tabeli 'zdjecia_noclegu'. Błąd: {e}")
+# except Exception as e:
+#     st.error(f"Nie udało się pobrać danych z tabeli 'zdjecia_noclegu'. Błąd: {e}")
 
 st.markdown("---")
 
@@ -275,6 +275,26 @@ try:
         )
 except Exception as e:
     st.error(f"Nie udało się pobrać danych z tabeli 'ulubione_noclegi'. Błąd: {e}")
+
+st.markdown("---")
+
+# --- NOWA SEKCJA: odpowiedzi_wlasciciela ---
+st.subheader("odpowiedzi_wlasciciela")
+query_odpowiedzi = """SELECT * FROM odpowiedzi_wlasciciela"""
+
+try:
+    df_odpowiedzi = conn.query(query_odpowiedzi, ttl=600)
+
+    if df_odpowiedzi.empty:
+        st.info("Tabela 'odpowiedzi_wlasciciela' jest pusta.")
+    else:
+        st.dataframe(
+            df_odpowiedzi,
+            width='stretch',
+            hide_index=True
+        )
+except Exception as e:
+    st.error(f"Nie udało się pobrać danych z tabeli 'odpowiedzi_wlasciciela'. Błąd: {e}")
 
 st.markdown("---")
 

@@ -1,5 +1,6 @@
 import streamlit as st
 from pathlib import Path
+import extra_streamlit_components as stx
 
 CSS_FILE = Path(__file__).resolve().parents[1] / "assets" / "css" / "style.css"
 
@@ -10,7 +11,8 @@ def load_app_styles() -> None:
             f"<style>{CSS_FILE.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True,
         )
 
-def render_page_header(label: str = "InnSight") -> None:
+# Dodajemy drugi parametr jawny is_auth_page z domyślną wartością False
+def render_page_header(label: str = "InnSight", is_konto_page: bool = False, is_auth_page: bool = False) -> None:
     """Render the fixed app header."""
     load_app_styles()
 
@@ -29,11 +31,10 @@ def render_page_header(label: str = "InnSight") -> None:
                 del st.query_params[param]
 
     user_name = st.session_state.get("user_name")
-    button_label = "Moje konto" if user_name else "Zaloguj się"
-    target_page = "pages/konto.py" if user_name else "pages/login.py"
 
     # Dodane dwie węższe kolumny na nowe przyciski na końcu paska
-    col_logo, col_spacer, col_login, col_db = st.columns([1, 2.5, 1, 0.1])
+    col_logo, col_spacer, col_login = st.columns([1, 2.5, 0.5])
+    # col_logo, col_spacer, col_login, col_db = st.columns([1, 2.5, 0.5, 0.5])
     
     with col_logo:
         st.image("assets/images/logo.svg", width=150) 
@@ -43,15 +44,34 @@ def render_page_header(label: str = "InnSight") -> None:
             clear_search_state()
             st.switch_page("app.py")
 
-    with col_login:
-        if st.button(button_label, key="header_login_btn", width='stretch'):
-            if not user_name:
-                st.session_state["going_to_login"] = True
-            st.switch_page(target_page)
+    # Przycisk w col_login renderuje się tylko wtedy, gdy NIE jesteśmy na stronie auth
+    if not is_auth_page:
+        with col_login:
+            # Korzystamy z przekazanego parametru is_konto_page
+            if is_konto_page and user_name:
+                if st.button("⏻  Wyloguj", key="header_logout_btn", width='stretch'):
+                    cookie_manager = stx.CookieManager(key="header_cookie_saver")
+                    cookie_manager.set("user_id", "", key="header_logout_uid")
+                    cookie_manager.set("user_name", "", key="header_logout_name")
+                    cookie_manager.set("user_role", "", key="header_logout_role")
 
-    with col_db:
-        if st.button("tabele", key="header_db_btn", width='stretch'):
-            st.switch_page("pages/db_tables.py")
+                    for key in ["user_id", "user_name", "user_role", "active_section"]:
+                        st.session_state.pop(key, None)
+
+                    st.success("Wylogowano pomyślnie!")
+                    st.switch_page("app.py")
+            else:
+                button_label = "Moje konto" if user_name else "Zaloguj się"
+                target_page = "pages/konto.py" if user_name else "pages/login.py"
+                
+                if st.button(button_label, key="header_login_btn", width='stretch'):
+                    if not user_name:
+                        st.session_state["going_to_login"] = True
+                    st.switch_page(target_page)
+
+    # with col_db:
+    #     if st.button("tabele", key="header_db_btn", width='stretch'):
+    #         st.switch_page("pages/db_tables.py")
             
 def render_page_footer() -> None:
     """Render the fixed app footer component."""

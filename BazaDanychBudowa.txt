@@ -186,3 +186,12 @@ CREATE TABLE powiadomienia (
     CONSTRAINT CHK_Kanal CHECK (typ_kanalu IN ('email', 'sms', 'in_app')),
     CONSTRAINT CHK_StatusPowiadomienia CHECK (status IN ('do_wyslania', 'wyslane', 'blad'))
 );
+================================================
+# ODPOWIEDZ WŁASCICIELA
+#         CREATE TABLE odpowiedzi_wlasciciela (
+#             id_odpowiedzi INT IDENTITY(1,1) PRIMARY KEY,
+#             id_opinii INT NOT NULL UNIQUE,
+#             tresc NVARCHAR(MAX) NOT NULL,
+#             data_dodania DATETIME DEFAULT GETDATE(),
+#             CONSTRAINT FK_odp_opinia FOREIGN KEY (id_opinii) REFERENCES opinie(id_opinii) ON DELETE CASCADE
+#         )

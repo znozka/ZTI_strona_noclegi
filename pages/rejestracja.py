@@ -62,4 +62,26 @@ with cent_co:
         st.switch_page("pages/login.py")
     st.markdown("<hr>", unsafe_allow_html=True)
 
+st.markdown(
+    """
+    <style>
+        .custom-footer {
+            position: static !important;
+            left: 0em !important;
+            right: 0em !important;
+            bottom: auto !important;
+            z-index: 1 !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .block-container {
+            padding-bottom: 24px !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 render_page_footer()

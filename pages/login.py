@@ -18,7 +18,7 @@ cookie_manager = stx.CookieManager(key="cookie_handler")
 if "user_id" in st.session_state and not st.session_state.get("needs_cookie_save"):
     st.switch_page("app.py")
 
-render_page_header()
+render_page_header(is_auth_page=True)
 conn = st.connection("azure_sql", type="sql")
 
 left_co, cent_co, right_co = st.columns([1, 1.5, 1])

@@ -553,30 +553,86 @@ def update_user_info(conn, user_id, imie, nazwisko, telefon):
     except Exception as e:
         return False, f"❌ Błąd bazy danych: {str(e)}"
     
+from sqlalchemy import text
 import pandas as pd
-def get_user_reservations(user_id, conn):
-    query = """
-    SELECT id_rezerwacji, nazwa, data_zameldowania, data_wymeldowania, status, calkowita_cena
-    FROM rezerwacje
-    WHERE id_turysty = ?
-    """
-    # W conn.query przekazujemy tylko zapytanie i parametry (bez przekazywania samego obiektu conn)
-    return conn.query(query, params=[user_id])
+import numpy as np # Upewnij się, że masz to zaimportowane
+
+
 
 def get_user_opinions(user_id, conn):
-    query = "SELECT * FROM opinie WHERE id_turysty = ?"
-    return conn.query(query, params=[user_id])
+    uid = int(user_id) 
+    query = text("""
+        SELECT 
+            o.id_opinii, 
+            o.id_rezerwacji,  -- <-- DODANE: niezbędne do mapowania w Streamlit
+            o.ocena, 
+            o.komentarz, 
+            o.data_dodania, 
+            o.id_noclegu, 
+            n.nazwa AS nazwa_obiektu
+        FROM opinie o
+        JOIN noclegi n ON o.id_noclegu = n.id_noclegu
+        WHERE o.id_turysty = :uid
+        ORDER BY 
+            CASE WHEN o.komentarz IS NOT NULL AND o.komentarz <> '' THEN 0 ELSE 1 END,
+            o.data_dodania DESC
+    """)
+    
+    with conn.session as s:
+        result = s.execute(query, {"uid": uid})
+        return pd.DataFrame(result.fetchall(), columns=result.keys())
+
+from sqlalchemy import text
+
+def get_user_reservations(user_id, conn):
+    # Używamy konstrukcji z ROW_NUMBER(), aby dla każdego obiektu (id_noclegu)
+    # wybrać tylko jeden (najnowszy) wiersz rezerwacji
+    query = """
+        WITH RankedReservations AS (
+            SELECT 
+                r.id_rezerwacji, 
+                n.nazwa, 
+                r.data_utworzenia, 
+                r.data_zameldowania, 
+                r.data_wymeldowania, 
+                r.status, 
+                r.id_noclegu,
+                ROW_NUMBER() OVER (PARTITION BY r.id_noclegu ORDER BY r.data_utworzenia DESC) as rn
+            FROM rezerwacje r
+            JOIN noclegi n ON r.id_noclegu = n.id_noclegu
+            WHERE r.id_turysty = :uid
+        )
+        SELECT TOP 5 
+            id_rezerwacji, nazwa, data_utworzenia, data_zameldowania, 
+            data_wymeldowania, status, id_noclegu,
+            (SELECT COUNT(*) FROM opinie o WHERE o.id_rezerwacji = RankedReservations.id_rezerwacji) as ma_opinie
+        FROM RankedReservations
+        WHERE rn = 1
+        ORDER BY data_wymeldowania DESC
+    """
+    return conn.query(query, params={"uid": int(user_id)})
 
 def can_edit_opinion(opinion_id, user_id, conn):
     query = "SELECT id_opinii FROM opinie WHERE id_opinii = ? AND id_turysty = ?"
     result = conn.query(query, params=[opinion_id, user_id])
     return not result.empty
 
+from sqlalchemy import text # Upewnij się, że masz ten import
+
 def update_opinion(opinion_id, new_rating, new_comment, conn):
+    # Rzutowanie na typy bazowe Pythona (int)
+    oid = int(opinion_id)
+    rating = int(new_rating)
+    
     with conn.session as s:
+        # Owijamy zapytanie w text() i używamy nazwanego parametru (:oid)
         s.execute(
-            "UPDATE opinie SET ocena = ?, komentarz = ?, data_modyfikacji = GETDATE(), czy_edytowana = 1 WHERE id_opinii = ?",
-            (new_rating, new_comment, opinion_id)
+            text("""
+                UPDATE opinie 
+                SET ocena = :r, komentarz = :c, data_modyfikacji = GETDATE(), czy_edytowana = 1 
+                WHERE id_opinii = :oid
+            """),
+            {"r": rating, "c": new_comment, "oid": oid}
         )
         s.commit()
 
@@ -586,31 +642,245 @@ def delete_opinion(opinion_id, conn):
         s.commit()
 
 def get_user_profile(user_id, conn):
-    query = "SELECT imie, nazwisko, telefon, email FROM uzytkownicy WHERE id_uzytkownika = ?"
-    result = conn.query(query, params=[user_id])
+    # Rzutowanie na int jest nadal ważne (aby uniknąć błędu numpy.int64)
+    clean_user_id = int(user_id)
+    
+    # 1. Używamy nazwanego parametru (:id) zamiast ?
+    query = "SELECT imie, nazwisko, telefon, email FROM uzytkownicy WHERE id_uzytkownika = :id"
+    
+    # 2. Przekazujemy parametry jako słownik (klucz: wartość)
+    result = conn.query(query, params={"id": clean_user_id})
+    
     if not result.empty:
-        # Konwersja wiersza DataFrame na słownik
         return result.iloc[0].to_dict()
     return None
 
 def update_user_info(user_id, imie, nazwisko, telefon, conn):
+    # Również tutaj rzutujemy ID na int
+    clean_user_id = int(user_id)
+    
     with conn.session as s:
         s.execute(
-            "UPDATE uzytkownicy SET imie = ?, nazwisko = ?, telefon = ? WHERE id_uzytkownika = ?",
-            (imie, nazwisko, telefon, user_id)
+            text("UPDATE uzytkownicy SET imie = :imie, nazwisko = :nazwisko, telefon = :telefon WHERE id_uzytkownika = :id"),
+            {"imie": imie, "nazwisko": nazwisko, "telefon": telefon, "id": clean_user_id}
         )
         s.commit()
 
-def verify_and_update_password(user_id, old_pass, new_pass, conn):
-    # Pobieramy hasło bezpośrednio przez query
-    query = "SELECT haslo_hash FROM uzytkownicy WHERE id_uzytkownika = ?"
-    result = conn.query(query, params=[user_id])
+import bcrypt # Upewnij się, że masz tę bibliotekę
+
+
+
+def hash_password(password: str) -> str:
+    """Konwertuje tekst hasła na bezpieczny hash."""
+    # Salt jest generowany automatycznie przez gensalt
+    salt = bcrypt.gensalt()
+    # Hashujemy hasło (musi być w bajtach .encode('utf-8'))
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    # Zwracamy hash jako string, aby można go było zapisać w bazie
+    return hashed.decode('utf-8')
+
+def check_password(password: str, hashed_password: str) -> bool:
+    """Weryfikuje, czy hasło pasuje do hasha."""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+
+def verify_and_update_user_credentials(user_id, old_pass, new_pass, new_email, conn):
+    # 1. Pobierz dane użytkownika
+    # PRZEKAŻ STRINGA zamiast obiektu text()
+    query = "SELECT haslo_hash FROM uzytkownicy WHERE id_uzytkownika = :id"
+    result = conn.query(query, params={"id": int(user_id)})
     
-    if not result.empty:
-        stored_hash = result.iloc[0]['haslo_hash']
-        if stored_hash == old_pass:  # Pamiętaj o użyciu bcrypt w przyszłości!
-            with conn.session as s:
-                s.execute("UPDATE uzytkownicy SET haslo_hash = ? WHERE id_uzytkownika = ?", (new_pass, user_id))
-                s.commit()
-            return True
-    return False
+    if result.empty:
+        return False, "Użytkownik nie istnieje."
+
+    stored_hash = result.iloc[0]['haslo_hash']
+    
+    # Weryfikacja hasła
+    if not check_password(old_pass, stored_hash):
+        return False, "Podano błędne obecne hasło."
+
+    # 2. Aktualizacja danych
+    with conn.session as s:
+        # Tutaj text() JEST wymagane, ponieważ korzystasz z s.execute (sesja SQLAlchemy)
+        s.execute(
+            text("UPDATE uzytkownicy SET haslo_hash = :new_pass, email = :new_email WHERE id_uzytkownika = :id"),
+            {"new_pass": new_pass, "new_email": new_email, "id": int(user_id)}
+        )
+        s.commit()
+    
+    return True, "Dane zostały zaktualizowane pomyślnie!"
+
+def add_new_property(user_id, nazwa, opis, typ, miasto, adres, cena, max_osoby, conn):
+    """
+    Dodaje nowy obiekt do tabeli 'noclegi' z wymuszoną konwersją typów numpy.
+    """
+    try:
+        # Konwersja typów numpy na natywne typy Pythona
+        clean_user_id = int(user_id) if isinstance(user_id, (np.integer, int)) else user_id
+        clean_cena = float(cena) if isinstance(cena, (np.floating, float)) else cena
+        clean_osoby = int(max_osoby) if isinstance(max_osoby, (np.integer, int)) else max_osoby
+
+        query = text("""
+            INSERT INTO noclegi 
+            (id_wlasciciela, nazwa, opis, typ_obiektu, lokalizacja_miasto, lokalizacja_adres, cena_za_noc, maks_liczba_osob)
+            VALUES (:uid, :nazwa, :opis, :typ, :miasto, :adres, :cena, :osoby)
+        """)
+        
+        with conn.session as s:
+            s.execute(query, {
+                "uid": clean_user_id, 
+                "nazwa": nazwa, 
+                "opis": opis, 
+                "typ": typ, 
+                "miasto": miasto, 
+                "adres": adres, 
+                "cena": clean_cena, 
+                "osoby": clean_osoby
+            })
+            s.commit()
+            
+        return True, "Obiekt został pomyślnie dodany!"
+    except Exception as e:
+        return False, f"Błąd podczas dodawania obiektu: {str(e)}"
+    
+
+def delete_opinion(id_opinii, conn):
+    """
+    Usuwa opinię z bazy danych na podstawie jej ID.
+    """
+    try:
+        query = text("DELETE FROM opinie WHERE id_opinii = :id")
+        with conn.session as s:
+            s.execute(query, {"id": id_opinii})
+            s.commit()
+        return True, "Opinia została usunięta."
+    except Exception as e:
+        return False, f"Błąd podczas usuwania opinii: {str(e)}"
+    
+def get_user_properties(user_id, conn):
+    """Pobiera listę 5 ostatnio dodanych obiektów należących do użytkownika."""
+    clean_id = int(user_id)  # Wymuszenie czystego typu int
+    
+    # Używamy TOP 5 oraz sortowania po data_dodania DESC
+    query = """
+        SELECT TOP 5 * FROM noclegi 
+        WHERE id_wlasciciela = :id 
+        ORDER BY data_dodania DESC
+    """
+    return conn.query(query, params=[{"id": clean_id}])
+
+def get_property_reviews(user_id, conn):
+    """Pobiera wszystkie opinie gości dla obiektów danego właściciela, 
+    sortując w pierwszej kolejności te, które posiadają komentarz tekstowy."""
+    clean_id = int(user_id)  # Wymuszenie czystego typu int
+    
+    # Warunek CASE sprawdza czy komentarz nie jest NULLem i czy nie jest pustym stringem
+    query = """
+        SELECT 
+            o.id_opinii AS id_opinii,
+            o.id_noclegu AS id_noclegu,
+            o.ocena AS ocena,
+            o.komentarz AS komentarz,
+            o.data_dodania AS data_dodania,
+            n.nazwa AS nazwa_obiektu, 
+            u.imie + ' ' + u.nazwisko AS autor,
+            ow.tresc AS odpowiedz_wlasciciela
+        FROM opinie o
+        INNER JOIN noclegi n ON o.id_noclegu = n.id_noclegu
+        INNER JOIN uzytkownicy u ON o.id_turysty = u.id_uzytkownika
+        LEFT JOIN odpowiedzi_wlasciciela ow ON o.id_opinii = ow.id_opinii
+        WHERE n.id_wlasciciela = :id
+        ORDER BY 
+            CASE 
+                WHEN o.komentarz IS NOT NULL AND LEN(TRIM(o.komentarz)) > 0 THEN 0 
+                ELSE 1 
+            END ASC,
+            o.data_dodania DESC
+    """
+    return conn.query(query, params=[{"id": clean_id}], ttl=0)
+
+
+def delete_property(property_id, conn):
+    try:
+        clean_property_id = int(property_id)
+        with conn.session as session:
+            # Rezerwacje i opinie mogą blokować usunięcie, jeśli nie ma CASCADE w DB.
+            # Dla bezpieczeństwa można najpierw usunąć powiązane elementy:
+            session.execute(text("DELETE FROM zdjecia_noclegu WHERE id_noclegu = :id"), {"id": clean_property_id})
+            session.execute(text("DELETE FROM kalendarz_dostepnosci WHERE id_noclegu = :id"), {"id": clean_property_id})
+            
+            # Właściwe usunięcie obiektu
+            query = text("DELETE FROM noclegi WHERE id_noclegu = :id")
+            result = session.execute(query, {"id": clean_property_id})
+            
+            session.commit() # <--- TO JEST KLUCZOWE DLA AZURE SQL
+            return True, "Obiekt został usunięty."
+    except Exception as e:
+        return False, f"Błąd bazy danych: {str(e)}"
+    
+from sqlalchemy import text
+
+def upsert_owner_reply(opinion_id, reply_text, conn):
+    """Dodaje nową odpowiedź właściciela lub aktualizuje istniejącą."""
+    try:
+        clean_opinion_id = int(opinion_id)
+        stripped_text = reply_text.strip()
+        
+        if not stripped_text:
+            return False, "Treść odpowiedzi nie może być pusta."
+            
+        query = text("""
+            MERGE odpowiedzi_wlasciciela AS target
+            USING (SELECT :id_opinii AS id_opinii) AS source
+            ON (target.id_opinii = source.id_opinii)
+            WHEN MATCHED THEN
+                UPDATE SET tresc = :tresc, data_dodania = GETDATE()
+            WHEN NOT MATCHED THEN
+                INSERT (id_opinii, tresc) VALUES (:id_opinii, :tresc);
+        """)
+        
+        with conn.session as session:
+            session.execute(query, {"id_opinii": clean_opinion_id, "tresc": stripped_text})
+            session.commit()
+            return True, "Odpowiedź została zapisana."
+    except Exception as e:
+        return False, f"Błąd bazy danych przy zapisywaniu odpowiedzi: {str(e)}"
+    
+
+
+def add_opinion(reservation_id, user_id, property_id, rating, comment, conn):
+    """
+    Dodaje nową opinię do tabeli 'opinie' na podstawie struktury bazy danych.
+    """
+    rid = int(reservation_id)
+    uid = int(user_id)
+    pid = int(property_id)
+    rate = int(rating)
+    
+    try:
+        with conn.session as s:
+            s.execute(
+                text("""
+                    INSERT INTO opinie (
+                        id_rezerwacji, 
+                        id_turysty, 
+                        id_noclegu, 
+                        ocena, 
+                        komentarz, 
+                        data_dodania, 
+                        czy_edytowana
+                    )
+                    VALUES (:rid, :uid, :pid, :r, :c, GETDATE(), 0)
+                """),
+                {
+                    "rid": rid,
+                    "uid": uid,
+                    "pid": pid,
+                    "r": rate,
+                    "c": comment
+                }
+            )
+            s.commit()
+        return True, "Opinia została pomyślnie dodana!"
+    except Exception as e:
+        return False, str(e)

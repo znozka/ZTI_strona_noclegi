@@ -289,3 +289,60 @@ button:has([data-testid="stElementToolbarButtonIcon"]),
 div[data-testid="InputInstructions"] > span:nth-child(1) {
     visibility: hidden;
 }
+
+
+.account-sidebar .stButton {
+    width: 100%;
+    margin-bottom: 2px;
+}
+
+.account-sidebar .stButton > button {
+    width: 100% !important;
+
+    background: transparent !important;
+    color: #222 !important;
+
+    border: none !important;
+    box-shadow: none !important;
+
+    padding: 14px 18px !important;
+
+    border-radius: 10px !important;
+
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+
+    font-size: 17px !important;
+    font-weight: 400 !important;
+
+    transition: all .15s ease;
+}
+
+.account-sidebar .stButton > button:hover {
+    background: #f5f5f5 !important;
+}
+
+.account-sidebar .stButton > button:focus {
+    box-shadow: none !important;
+}
+
+.account-sidebar .stButton > button p {
+    width: 100%;
+    text-align: left;
+}
+
+.account-tile {
+    background: white;
+    border: 1px solid #e8e8e8;
+    border-radius: 16px;
+    padding: 10px;
+    margin-bottom: 18px;
+}
+
+.account-tile-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111;
+    padding: 10px 14px 14px 14px;
+}
