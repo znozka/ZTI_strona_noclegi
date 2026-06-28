@@ -1,4 +1,7 @@
 import datetime
+import urllib.parse
+import base64
+import mimetypes
 import streamlit as st
 import extra_streamlit_components as stx  
 from src.ui import render_page_header, render_page_footer
@@ -65,12 +68,55 @@ def pobierz_unikalne_miasta():
 
 lista_miast = pobierz_unikalne_miasta()
 
+
+def _make_clickable_image(path, href):
+    """Return HTML for an image wrapped in a link, embedding the image as base64."""
+    try:
+        mime, _ = mimetypes.guess_type(path)
+        with open(path, "rb") as f:
+            data = f.read()
+        b64 = base64.b64encode(data).decode()
+        src = f"data:{mime};base64,{b64}" if mime else f"data:image/png;base64,{b64}"
+        return f"<a href='{href}'><img src='{src}' style='width:100%; height:auto; display:block;'/></a>"
+    except Exception:
+        # fallback to simple img tag if reading fails
+        return f"<a href='{href}'><img src='{path}' style='width:100%; height:auto; display:block;'/></a>"
+
 miejsce_sesja = st.session_state.get("search_miejsce", "")
 
 if miejsce_sesja in lista_miast and miejsce_sesja != "":
     domyslny_indeks = lista_miast.index(miejsce_sesja)
 else:
     domyslny_indeks = None 
+
+# Jeśli kliknięto link z parametrem (np. kliknięcie obrazu), ustaw parametry i przekieruj
+params = st.query_params if hasattr(st, "query_params") else {}
+
+def _first(v):
+    if isinstance(v, list):
+        return v[0] if v else ""
+    return v
+
+clicked = _first(params.get("clicked"))
+miejsce_param = _first(params.get("miejsce"))
+if clicked == "True" and miejsce_param:
+    st.session_state.search_clicked = True
+    st.session_state.search_miejsce = miejsce_param
+    try:
+        osoby_val = _first(params.get("osoby"))
+        st.session_state.search_osoby = int(osoby_val) if osoby_val else st.session_state.get("search_osoby", 2)
+    except Exception:
+        st.session_state.search_osoby = st.session_state.get("search_osoby", 2)
+
+    try:
+        dod = _first(params.get("data_od")) or str(datetime.date.today())
+        ddo = _first(params.get("data_do")) or str(datetime.date.today() + datetime.timedelta(days=2))
+        st.session_state.search_data_od = datetime.date.fromisoformat(dod)
+        st.session_state.search_data_do = datetime.date.fromisoformat(ddo)
+    except Exception:
+        pass
+
+    st.switch_page("pages/wyniki_wyszukiwania.py")
 
 st.title("Witaj w InnSight")
 if st.session_state.get("user_name"):
@@ -157,7 +203,13 @@ for i, col in enumerate(cols_recommended):
     city = recommended_cities[i]
     with col:
         with st.container(border=True):
-            st.image(city["file"], width='stretch')
+            img_href = (
+                f"?miejsce={urllib.parse.quote(city['name'])}"
+                f"&data_od={str(st.session_state.get('search_data_od', datetime.date.today()))}"
+                f"&data_do={str(st.session_state.get('search_data_do', datetime.date.today() + datetime.timedelta(days=2)))}"
+                f"&osoby={st.session_state.get('search_osoby', 2)}&clicked=True"
+            )
+            st.markdown(_make_clickable_image(city['file'], img_href), unsafe_allow_html=True)
             st.markdown(
                 f"<div style='text-align: center; font-weight: bold; padding: 5px;'>{city['name']}</div>",
                 unsafe_allow_html=True,
@@ -175,17 +227,29 @@ new_cities = [
 
 with cols_new_dest[0]:
     with st.container(border=True):
-        st.image(new_cities[0]["file"], width='stretch')
+        img_href = (
+            f"?miejsce={urllib.parse.quote(new_cities[0]['name'])}"
+            f"&data_od={str(st.session_state.get('search_data_od', datetime.date.today()))}"
+            f"&data_do={str(st.session_state.get('search_data_do', datetime.date.today() + datetime.timedelta(days=2)))}"
+            f"&osoby={st.session_state.get('search_osoby', 2)}&clicked=True"
+        )
+        st.markdown(_make_clickable_image(new_cities[0]['file'], img_href), unsafe_allow_html=True)
         st.markdown(
-            f"<div style='text-align: center; font-weight: bold; padding: 5px;'>{new_cities[0]['name']}</div>",
+            f"<div style='text-align: center; font-weight: bold; padding: 5px; font-size: 1.3rem'>{new_cities[0]['name']}</div>",
             unsafe_allow_html=True,
         )
 
 with cols_new_dest[1]:
     with st.container(border=True):
-        st.image(new_cities[1]["file"], width='stretch')
+        img_href = (
+            f"?miejsce={urllib.parse.quote(new_cities[1]['name'])}"
+            f"&data_od={str(st.session_state.get('search_data_od', datetime.date.today()))}"
+            f"&data_do={str(st.session_state.get('search_data_do', datetime.date.today() + datetime.timedelta(days=2)))}"
+            f"&osoby={st.session_state.get('search_osoby', 2)}&clicked=True"
+        )
+        st.markdown(_make_clickable_image(new_cities[1]['file'], img_href), unsafe_allow_html=True)
         st.markdown(
-            f"<div style='text-align: center; font-weight: bold; padding: 5px;'>{new_cities[1]['name']}</div>",
+            f"<div style='text-align: center; font-weight: bold; padding: 5px; font-size: 1.3rem'>{new_cities[1]['name']}</div>",
             unsafe_allow_html=True,
         )
 
