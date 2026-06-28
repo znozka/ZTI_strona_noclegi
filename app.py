@@ -14,7 +14,7 @@ MAPA_ZDJEC = {
     "Warszawa": "assets/images/Warszawa.jpeg",
     "Wrocław": "assets/images/Wrocław.jpg",
     "Poznań": "assets/images/Poznań.jpg",
-    "Łódź": "assets/images/Łódź.png",
+    "Łódź": "assets/images/Łódź.jpg",
     "Katowice": "assets/images/Katowice.jpg"
 }
 
@@ -222,7 +222,7 @@ cols_new_dest = st.columns(2)
 
 new_cities = [
     {"name": "Poznań", "file": "assets/images/Poznań.jpg"},
-    {"name": "Łódź", "file": "assets/images/Łódź.png"},
+    {"name": "Łódź", "file": "assets/images/Łódź.jpg"},
 ]
 
 with cols_new_dest[0]:
@@ -353,7 +353,7 @@ def generuj_plan_wycieczki(destination, origin, start_date, end_date, trip_type)
 
     plan = [f"# Plan wycieczki AI: {destination}",
             f"**Typ wycieczki:** {trip_type}",
-            f"**Termin:** {start_date} – {end_date} ({days} dni)",
+            f"**Termin:** {start_date} - {end_date} ({days} dni)",
             f"**Trasa:** {route}",
             "---",
             "## Co możesz robić"]
@@ -362,7 +362,7 @@ def generuj_plan_wycieczki(destination, origin, start_date, end_date, trip_type)
         activity = activities[i]
         plan.append(f"### Dzień {i+1}: {activity[0]}")
         plan.append(f"- Szacowany czas: {activity[1]}")
-        plan.append(f"- Polecane godziny: {10 + i*2}:00 – {12 + i*2}:00")
+        plan.append(f"- Polecane godziny: {10 + i*2}:00 - {12 + i*2}:00")
 
     if days > len(activities):
         plan.append("### Dodatkowy dzień")
@@ -381,7 +381,7 @@ st.markdown("---")
 st.subheader("Zaplanuj swoją wycieczkę z pomocą AI")
 with st.container(border=True):
     st.markdown(
-        "Skorzystaj z naszego pomocnika AI do planowania wycieczek! Wybierz miejsce, daty oraz rodzaj wycieczki, a nasz asystent AI przygotuje przykładowy plan: co robić, jak dojechać i ile będzie trwać każda atrakcja." \
+        "Skorzystaj z naszego pomocnika AI do planowania wycieczek! Wybierz miejsce, daty oraz rodzaj podróży, a nasz asystent AI przygotuje przykładowy plan: co robić, jak dojechać i ile będzie trwać każda atrakcja." \
         "<br>**Generowanie planu zajmie dłuższą chwilę.**", unsafe_allow_html=True,
     )
 
@@ -421,7 +421,7 @@ with st.container(border=True):
                     )
                 else:
                     st.warning(
-                        "AI jest niedostępne. Dodaj prawidłowy klucz OpenAI lub Hugging Face do pliku `.streamlit/secrets.toml` lub ustaw odpowiednią zmienną środowiskową."
+                        "AI jest niedostępne. Dodaj prawidłowy klucz OpenAI lub Hugging Face do pliku `.streamlit/secrets.toml`."
                     )
                     st.info(
                         "Przykład formatu pliku `.streamlit/secrets.toml`:\n```\n[openai]\napi_key = \"TWÓJ_OPENAI_API_KEY\"\n```"
