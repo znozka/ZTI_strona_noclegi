@@ -76,6 +76,7 @@ with cent_co:
                     st.session_state.user_id = user.id_uzytkownika
                     st.session_state.user_name = user.imie
                     st.session_state.user_role = user.rola
+                    st.session_state.user_email = email
 
                     st.session_state.pop("needs_cookie_save", None)
                     

@@ -8,6 +8,7 @@ import logging
 import warnings
 from sqlalchemy import text
 from src.ui import render_page_header, render_page_footer
+from src.utils import send_booking_created_email
 
 # ukrycie ostrzeżeń w konsoli
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -221,7 +222,7 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
     if data_od and data_do:
         if data_od < data_do:
             liczba_nocy = (data_do - data_od).days
-            koszt_pobytu = liczba_nocy * OBIEKT["cena_za_noc"]
+            koszt_pobytu = round(liczba_nocy * OBIEKT["cena_za_noc"], 2)
 
             lista_dodatkow = []
             koszt_dodatkow = 0
@@ -238,7 +239,7 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
                 lista_dodatkow.append("Pobyt ze zwierzęciem: **100 PLN**")
                 koszt_dodatkow += 100
 
-            sum_total = koszt_pobytu + koszt_dodatkow
+            sum_total = round(koszt_pobytu + koszt_dodatkow,2)
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("## Podsumowanie rezerwacji")
@@ -262,7 +263,7 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
             with col_prawa_koszty:
                 with st.container(border=True):
                     st.markdown("### Opłaty")
-                    st.markdown(f"Wynajem: **{koszt_pobytu} PLN**")
+                    st.markdown(f"Wynajem: **{koszt_pobytu:.2f} PLN**")
                     
                     if lista_dodatkow:
                         st.markdown("**Wybrane usługi dodatkowe:**")
@@ -277,7 +278,7 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
                         f"""
                         <div style="padding: 12px 18px; border-radius: 8px; margin-top: 10px;">
                             <span style="font-size: 13px; font-weight: 600; color: #555; display: block; margin-bottom: 2px; letter-spacing: 0.5px;">RAZEM DO ZAPŁATY</span>
-                            <span style="font-size: 34px; font-weight: 800; color: #EAB308; letter-spacing: -0.5px;">{sum_total} PLN</span>
+                            <span style="font-size: 34px; font-weight: 800; color: #EAB308; letter-spacing: -0.5px;">{sum_total:.2f} PLN</span>
                         </div>
                         """, 
                         unsafe_allow_html=True
@@ -302,10 +303,18 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
                             query_insert = """
                                 INSERT INTO rezerwacje (
                                 id_turysty, id_noclegu, data_zameldowania, data_wymeldowania, liczba_gosci, calkowita_cena, status
-                                ) VALUES (
+                                ) 
+                                VALUES (
                                     :id_turysty, :id_noclegu, :data_od, :data_do, :liczba_gosci, :cena, 'oczekuje_na_platnosc'
                                 )
                             """
+                            query_select_id = """
+                                SELECT TOP 1 id_rezerwacji 
+                                FROM rezerwacje 
+                                WHERE id_turysty = :id_turysty AND id_noclegu = :id_noclegu
+                                ORDER BY id_rezerwacji DESC
+                            """
+
                             with conn.session as session:
                                 session.execute(
                                     text(query_insert),
@@ -320,13 +329,28 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
                                 )
                                 session.commit()
 
+                                result = session.execute(
+                                    text(query_select_id),
+                                    {"id_turysty": int(id_turysty), "id_noclegu": int(selected_id)}
+                                )
+                                id_rezerwacji = int(result.fetchone()[0])
+                                
+                            
+                            send_booking_created_email(
+                                to_email=st.session_state.user_email, 
+                                id_rezerwacji=id_rezerwacji, 
+                                nazwa_obiektu=OBIEKT['nazwa'], 
+                                kwota=sum_total
+                            )
+
                             st.session_state.rezerwacja_kliknieta = True
                             st.rerun()
 
                         except Exception as e:
                             st.error(f"Błąd zapisu rezerwacji do bazy danych {e}")
             else:
-                st.success("Sukces! Przekierowywanie do bramki płatniczej...")
+                st.success("Sukces! Przejdź do płatności aby opłacić swoją rezerwację.")
+               
 
                 if st.button("Przejdź do płatności", use_container_width=True, type="primary"):
                     st.info("Przekierowywanie do bramki płatniczej...")
@@ -340,13 +364,11 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
     kliknieto_powrot = st.markdown(
         """
         <style>
-            /* Celujemy w przycisk powrotu za pomocą specjalnego atrybutu (pomoże nam st.button z odpowiednim kluczem) */
             div[data-testid="stButton"] button[key="btn_powrot_szary"] {
-                background-color: #f0f2f6 !important; /* Jasnoszary dla jasnego motywu */
-                color: #31333f !important;            /* Ciemny tekst */
-                border: 1px solid #d3d3d3 !important; /* Delikatna ramka */
+                background-color: #f0f2f6 !important;
+                color: #31333f !important;
+                border: 1px solid #d3d3d3 !important;
             }
-            /* Efekt po najechaniu myszką */
             div[data-testid="stButton"] button[key="btn_powrot_szary"]:hover {
                 background-color: #e0e4ec !important;
                 border-color: #bcbcbc !important;

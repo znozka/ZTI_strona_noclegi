@@ -3,6 +3,7 @@ import warnings
 import streamlit as st
 import time
 from sqlalchemy import text
+from src.utils import send_payment_email
 
 # ukrycie ostrzeżeń w konsoli
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -172,13 +173,20 @@ if submit_button:
                     "id_rez": id_rezerwacji
                 })
                 session.commit()
+
+            send_payment_email(
+                to_email=st.session_state.user_email,
+                id_rezerwacji=id_rezerwacji,
+                kwota=kwota,
+                id_transakcji=atrapa_transakcji_id
+            )
             
             st.success("Płatność zakończona sukcesem! Twoja rezerwacja została potwierdzona.")
             
             st.session_state.rezerwacja_kliknieta = False
             st.session_state.pokaz_podsumowanie = False
             
-            time.sleep(7)
+            time.sleep(5)
             st.switch_page("app.py")
             
         except Exception as e:

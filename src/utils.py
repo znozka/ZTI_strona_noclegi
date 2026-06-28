@@ -31,7 +31,32 @@ def wyswietl_zdjecie(url, szerokosc=400, wysokosc=250):
             return img_przyciete
     except Exception:
         pass
-    return None 
+    return None
+
+def send_system_email(to_email, subject, html_content):
+    # Funkcja uniwersalna do wysyłania e-maili systemowych z wykorzystaniem danych z secrets.toml
+    smtp_server = st.secrets["email"]["smtp_server"]
+    smtp_port = st.secrets["email"]["smtp_port"]
+    smtp_user = st.secrets["email"]["smtp_user"]
+    smtp_password = st.secrets["email"]["smtp_password"]
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"InnSight <{smtp_user}>"
+    msg["To"] = to_email
+
+    msg.attach(MIMEText(html_content, "html"))
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(smtp_user, to_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Błąd wysyłania maila ({subject}): {e}")
+        return False
 
 def send_reset_email(to_email, user_id):
     # Pobieranie danych z secrets
@@ -73,3 +98,41 @@ def send_reset_email(to_email, user_id):
     except Exception as e:
         print(f"Błąd wysyłania maila: {e}")
         return False
+    
+def send_booking_created_email(to_email, id_rezerwacji, nazwa_obiektu, kwota):
+    subject = f"Potwierdzenie rezerwacji #{id_rezerwacji} - Oczekuje na płatność"
+    html = f"""
+    <html>
+        <body style="font-family: sans-serif; color: #333;">
+            <h2>Dziękujemy za dokonanie rezerwacji!</h2>
+            <p>Twoje zgłoszenie dla obiektu <b>{nazwa_obiektu}</b> zostało pomyślnie zarejestrowane w systemie.</p>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p><b>Numer rezerwacji:</b> #{id_rezerwacji}</p>
+            <p><b>Kwota do zapłaty:</b> {kwota:.2f} PLN</p>
+            <p><b>Status:</b> Oczekuje na płatność</p>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p>Pamiętaj, aby dokończyć płatność w aplikacji!</p>
+        </body>
+    </html>
+    """
+    return send_system_email(to_email, subject, html)
+
+def send_payment_email(to_email, id_rezerwacji, kwota, id_transakcji):
+    subject = f"Płatność zaakceptowana dla rezerwacji #{id_rezerwacji}"
+    html = f"""
+    <html>
+        <body style="font-family: sans-serif; color: #333;">
+            <h2 style="color: #2e7d32;">Płatność zakończona sukcesem!</h2>
+            <p>Otrzymaliśmy Twoją płatność za rezerwację numer <b>#{id_rezerwacji}</b>.</p>
+            <div style="background-color: #f1f8e9; padding: 15px; border-radius: 8px; border: 1px solid #c5e1a5;">
+                <p style="margin: 4px 0;"><b>Kwota:</b> {kwota:.2f} PLN</p>
+                <p style="margin: 4px 0;"><b>Metoda płatności:</b> BLIK</p>
+                <p style="margin: 4px 0;"><b>Identyfikator transakcji:</b> {id_transakcji}</p>
+            </div>
+            <p>Twoja rezerwacja zmieniła status na <b>potwierdzona</b>. Życzymy udanego pobytu!</p>
+            <br>
+            <p>Pozdrawiamy,<br>Zespół InnSight</p>
+      </body>
+    </html>
+    """
+    return send_system_email(to_email, subject, html)
