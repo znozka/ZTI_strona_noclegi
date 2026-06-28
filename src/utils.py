@@ -72,9 +72,8 @@ def send_reset_email(to_email, user_id):
     
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Odzyskiwanie hasła - InnSight"
-    msg["From"] = smtp_user
+    msg["From"] = f"InnSight <{smtp_user}>"
     msg["To"] = to_email
-    
     html = f"""
     <html>
       <body>
