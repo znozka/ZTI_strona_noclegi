@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-render_page_header()
+render_page_header(is_auth_page=True)
 
 conn = st.connection("azure_sql", type="sql")
 
