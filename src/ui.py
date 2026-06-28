@@ -49,7 +49,7 @@ def render_page_header(label: str = "InnSight", is_konto_page: bool = False, is_
         with col_login:
             # Korzystamy z przekazanego parametru is_konto_page
             if is_konto_page and user_name:
-                if st.button("⏻  Wyloguj", key="header_logout_btn", width='stretch'):
+                if st.button("⏻  Wyloguj", key="header_logout_btn", width='stretch', type = "primary"):
                     cookie_manager = stx.CookieManager(key="header_cookie_saver")
                     cookie_manager.set("user_id", "", key="header_logout_uid")
                     cookie_manager.set("user_name", "", key="header_logout_name")
@@ -64,7 +64,7 @@ def render_page_header(label: str = "InnSight", is_konto_page: bool = False, is_
                 button_label = "Moje konto" if user_name else "Zaloguj się"
                 target_page = "pages/konto.py" if user_name else "pages/login.py"
                 
-                if st.button(button_label, key="header_login_btn", width='stretch'):
+                if st.button(button_label, key="header_login_btn", width='stretch', type="primary"):
                     if not user_name:
                         st.session_state["going_to_login"] = True
                     st.switch_page(target_page)

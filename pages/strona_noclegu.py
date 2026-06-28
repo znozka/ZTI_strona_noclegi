@@ -386,7 +386,7 @@ else:
 
                 st.markdown("---")
                 st.markdown('##### Decyzja podjęta?')
-                if st.button("Przejdź do rezerwacji"):
+                if st.button("Przejdź do rezerwacji", type="primary"):
                     st.switch_page("pages/rezerwacja_noclegu.py")
                     
             with col_side:
@@ -543,7 +543,7 @@ else:
                                 st.html(karuzela_html)
 
                         # ===== BUTTON =====
-                        if st.button("Pokaż wszystkie opinie", key="pokaz_opinie_btn", use_container_width=True):
+                        if st.button("Pokaż wszystkie opinie", key="pokaz_opinie_btn", use_container_width=True, type="primary"):
                             st.session_state.pokaz_wszystkie_opinie = True
                             st.rerun()
                 # PANEL MAPA

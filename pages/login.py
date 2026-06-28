@@ -64,7 +64,8 @@ with cent_co:
             
             haslo = st.text_input("Wpisz hasło", type="password", placeholder="••••••••", key="login_password")
             
-            submit_button = st.form_submit_button("Zaloguj się", use_container_width=True)
+            # submit_button = st.form_submit_button("Zaloguj się", use_container_width=True)
+            submit_button = st.form_submit_button("Zaloguj się", use_container_width=True, type="primary")
             
         if submit_button:
             if not email or not haslo:
