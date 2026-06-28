@@ -381,7 +381,8 @@ st.markdown("---")
 st.subheader("Zaplanuj swoją wycieczkę z pomocą AI")
 with st.container(border=True):
     st.markdown(
-        "Skorzystaj z naszego pomocnika AI do planowania wycieczek! Wybierz miejsce, daty oraz rodzaj wycieczki, a nasz asystent AI przygotuje przykładowy plan: co robić, jak dojechać i ile będzie trwać każda atrakcja. Generowanie planu zajmie dłuższą chwilę",
+        "Skorzystaj z naszego pomocnika AI do planowania wycieczek! Wybierz miejsce, daty oraz rodzaj wycieczki, a nasz asystent AI przygotuje przykładowy plan: co robić, jak dojechać i ile będzie trwać każda atrakcja." \
+        "<br>**Generowanie planu zajmie dłuższą chwilę.**", unsafe_allow_html=True,
     )
 
     c1, c2, c3, c4 = st.columns([1.8, 1.3, 1.3, 1.6])
