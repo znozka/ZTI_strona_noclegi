@@ -1,4 +1,6 @@
 import requests
+import time
+import os
 from io import BytesIO
 from PIL import Image, ImageOps
 import streamlit as st
@@ -136,3 +138,384 @@ def send_payment_email(to_email, id_rezerwacji, kwota, id_transakcji):
     </html>
     """
     return send_system_email(to_email, subject, html)
+
+
+
+def get_ai_credentials():
+    hint = None
+    if isinstance(st.secrets, dict):
+        hint = st.secrets.get("AI_PROVIDER") or st.secrets.get("OPENAI_API_PROVIDER") or st.secrets.get("provider")
+        if isinstance(hint, str):
+            hint = hint.lower().strip()
+
+    if "openai" in st.secrets and isinstance(st.secrets["openai"], dict):
+        api_key = st.secrets["openai"].get("api_key")
+        if api_key:
+            return {
+                "provider": "openai",
+                "api_key": api_key,
+                "model": st.secrets["openai"].get("model", "gpt-3.5-turbo"),
+                "source": "st.secrets[openai]",
+            }
+
+    if "OPENROUTER_API_KEY" in st.secrets:
+        return {
+            "provider": "openrouter",
+            "api_key": st.secrets["OPENROUTER_API_KEY"],
+            "model": st.secrets.get("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
+            "source": "st.secrets[OPENROUTER_API_KEY]",
+        }
+
+    if "OPENAI_API_KEY" in st.secrets:
+        api_key = st.secrets["OPENAI_API_KEY"]
+        hf_model = st.secrets.get("HUGGINGFACE_MODEL")
+        if isinstance(api_key, str) and api_key.startswith("sk-or-"):
+            return {
+                "provider": "openrouter",
+                "api_key": api_key,
+                "model": st.secrets.get("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
+                "source": "st.secrets[OPENAI_API_KEY]",
+            }
+        if isinstance(api_key, str) and (api_key.startswith("hf_") or hf_model is not None or hint == "huggingface"):
+            return {
+                "provider": "huggingface",
+                "api_key": api_key,
+                "model": st.secrets.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+                "source": "st.secrets[OPENAI_API_KEY]",
+            }
+        return {
+            "provider": "openai",
+            "api_key": api_key,
+            "model": "gpt-3.5-turbo",
+            "source": "st.secrets[OPENAI_API_KEY]",
+        }
+
+    if "api_keys" in st.secrets:
+        api_hint = st.secrets.api_keys.get("AI_PROVIDER") or st.secrets.api_keys.get("OPENAI_API_PROVIDER") or st.secrets.api_keys.get("provider")
+        if isinstance(api_hint, str):
+            api_hint = api_hint.lower().strip()
+        hf_model = st.secrets.api_keys.get("HUGGINGFACE_MODEL")
+
+        api_key = st.secrets.api_keys.get("OPENROUTER_API_KEY")
+        if api_key:
+            return {
+                "provider": "openrouter",
+                "api_key": api_key,
+                "model": st.secrets.api_keys.get("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
+                "source": "st.secrets.api_keys[OPENROUTER_API_KEY]",
+            }
+
+        api_key = st.secrets.api_keys.get("OPENAI_API_KEY")
+        if api_key:
+            if isinstance(api_key, str) and api_key.startswith("sk-or-"):
+                return {
+                    "provider": "openrouter",
+                    "api_key": api_key,
+                    "model": st.secrets.api_keys.get("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
+                    "source": "st.secrets.api_keys[OPENAI_API_KEY]",
+                }
+            if isinstance(api_key, str) and (api_key.startswith("hf_") or hf_model is not None or api_hint == "huggingface" or hint == "huggingface"):
+                return {
+                    "provider": "huggingface",
+                    "api_key": api_key,
+                    "model": st.secrets.api_keys.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+                    "source": "st.secrets.api_keys[OPENAI_API_KEY]",
+                }
+            return {
+                "provider": "openai",
+                "api_key": api_key,
+                "model": "gpt-3.5-turbo",
+                "source": "st.secrets.api_keys[OPENAI_API_KEY]",
+            }
+        api_key = st.secrets.api_keys.get("OPENAI_API_KEY_OPENAI")
+        if api_key:
+            if isinstance(api_key, str) and api_key.startswith("sk-or-"):
+                return {
+                    "provider": "openrouter",
+                    "api_key": api_key,
+                    "model": st.secrets.api_keys.get("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
+                    "source": "st.secrets.api_keys[OPENAI_API_KEY_OPENAI]",
+                }
+            if isinstance(api_key, str) and (api_key.startswith("hf_") or hf_model is not None or api_hint == "huggingface" or hint == "huggingface"):
+                return {
+                    "provider": "huggingface",
+                    "api_key": api_key,
+                    "model": st.secrets.api_keys.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+                    "source": "st.secrets.api_keys[OPENAI_API_KEY_OPENAI]",
+                }
+            return {
+                "provider": "openai",
+                "api_key": api_key,
+                "model": "gpt-3.5-turbo",
+                "source": "st.secrets.api_keys[OPENAI_API_KEY_OPENAI]",
+            }
+        api_key = st.secrets.api_keys.get("api_key")
+        if api_key:
+            if isinstance(api_key, str) and api_key.startswith("sk-or-"):
+                return {
+                    "provider": "openrouter",
+                    "api_key": api_key,
+                    "model": st.secrets.api_keys.get("OPENROUTER_MODEL", "openai/gpt-oss-120b:free"),
+                    "source": "st.secrets.api_keys[api_key]",
+                }
+            if isinstance(api_key, str) and (api_key.startswith("hf_") or hf_model is not None or api_hint == "huggingface" or hint == "huggingface"):
+                return {
+                    "provider": "huggingface",
+                    "api_key": api_key,
+                    "model": st.secrets.api_keys.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+                    "source": "st.secrets.api_keys[api_key]",
+                }
+            return {
+                "provider": "openai",
+                "api_key": api_key,
+                "model": "gpt-3.5-turbo",
+                "source": "st.secrets.api_keys[api_key]",
+            }
+
+    if "huggingface" in st.secrets and isinstance(st.secrets["huggingface"], dict):
+        api_key = st.secrets["huggingface"].get("api_key")
+        if api_key:
+            return {
+                "provider": "huggingface",
+                "api_key": api_key,
+                "model": st.secrets["huggingface"].get("model", "google/gemma-4-31b-it:free"),
+                "source": "st.secrets[huggingface]",
+            }
+
+    if "HUGGINGFACE_API_KEY" in st.secrets:
+        return {
+            "provider": "huggingface",
+            "api_key": st.secrets["HUGGINGFACE_API_KEY"],
+            "model": st.secrets.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+            "source": "st.secrets[HUGGINGFACE_API_KEY]",
+        }
+
+    if "api_key" in st.secrets and isinstance(st.secrets["api_key"], str) and st.secrets["api_key"].startswith("hf_"):
+        return {
+            "provider": "huggingface",
+            "api_key": st.secrets["api_key"],
+            "model": st.secrets.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+            "source": "st.secrets[api_key]",
+        }
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if api_key:
+        if api_key.startswith("hf_"):
+            return {
+                "provider": "huggingface",
+                "api_key": api_key,
+                "model": os.environ.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+                "source": "env[OPENAI_API_KEY]",
+            }
+        return {
+            "provider": "openai",
+            "api_key": api_key,
+            "model": "gpt-3.5-turbo",
+            "source": "env[OPENAI_API_KEY]",
+        }
+    api_key = os.environ.get("OPENAI_API_KEY_OPENAI")
+    if api_key:
+        if api_key.startswith("hf_"):
+            return {
+                "provider": "huggingface",
+                "api_key": api_key,
+                "model": os.environ.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+                "source": "env[OPENAI_API_KEY_OPENAI]",
+            }
+        return {
+            "provider": "openai",
+            "api_key": api_key,
+            "model": "gpt-3.5-turbo",
+            "source": "env[OPENAI_API_KEY_OPENAI]",
+        }
+    api_key = os.environ.get("HUGGINGFACE_API_KEY")
+    if api_key:
+        return {
+            "provider": "huggingface",
+            "api_key": api_key,
+            "model": os.environ.get("HUGGINGFACE_MODEL", "google/gemma-4-31b-it:free"),
+            "source": "env[HUGGINGFACE_API_KEY]",
+        }
+    return None
+
+
+def generuj_plan_wycieczki_ai(destination, origin, start_date, end_date, trip_type):
+    credentials = get_ai_credentials()
+    if not credentials:
+        st.session_state["openai_api_source"] = None
+        st.session_state["openai_error"] = None
+        return None
+
+    provider = credentials["provider"]
+    api_key = credentials["api_key"]
+    model = credentials.get("model")
+    st.session_state["openai_api_source"] = credentials["source"]
+    st.session_state["openai_error"] = None
+
+    system_prompt = (
+        "Jesteś asystentem podróży. Przygotuj plan wycieczki dla użytkownika, włączając atrakcje, dojazd, czas trwania i praktyczne informacje. "
+        "Użyj zwięzłego, przyjaznego stylu."
+    )
+
+    user_prompt = (
+        f"Przygotuj plan wycieczki do {destination} z miejsca {origin}. "
+        f"Termin: {start_date} - {end_date}. "
+        f"Rodzaj wycieczki: {trip_type}. "
+        "Podaj listę atrakcji, orientacyjny czas trwania, sposób dojazdu i krótkie wskazówki dotyczące każdego dnia. "
+        "Nie używaj kodu ani formatowania JSON, tylko zwykły tekst."
+    )
+
+    if provider == "openai":
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.8
+        }
+
+        attempt = 0
+        max_attempts = 5
+        base_wait = 5  # 5 sekund na początek, będzie rosnąć exponentially
+        
+        while attempt < max_attempts:
+            try:
+                response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=20)
+                
+                if response.status_code == 429:
+                    attempt += 1
+                    if attempt < max_attempts:
+                        wait = base_wait * (2 ** (attempt - 1))
+                        st.session_state["openai_error"] = f"Rate limit osiągnięty. Próba {attempt}/{max_attempts} - czekam {wait}s..."
+                        time.sleep(wait)
+                        continue
+                    else:
+                        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę lub zmniejsz liczbę żądań."
+                        return None
+                
+                response.raise_for_status()
+                result = response.json()
+                st.session_state["openai_error"] = None
+                return result["choices"][0]["message"]["content"].strip()
+                
+            except requests.exceptions.HTTPError as e:
+                st.session_state["openai_error"] = str(e)
+                if hasattr(response, 'status_code') and response.status_code == 429:
+                    attempt += 1
+                    if attempt < max_attempts:
+                        wait = base_wait * (2 ** (attempt - 1))
+                        time.sleep(wait)
+                        continue
+                    else:
+                        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
+                        return None
+                print(f"OpenAI request failed: {e}")
+                return None
+            except Exception as e:
+                st.session_state["openai_error"] = str(e)
+                print(f"OpenAI request failed: {e}")
+                return None
+        
+        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
+        return None
+
+    if provider == "huggingface":
+        model_name = model
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "inputs": f"{system_prompt}\n{user_prompt}",
+            "parameters": {
+                "max_new_tokens": 500,
+                "temperature": 0.8,
+                "return_full_text": False
+            }
+        }
+
+        try:
+            response = requests.post(f"https://api-inference.huggingface.co/models/{model_name}", headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            if isinstance(result, dict) and result.get("error"):
+                st.session_state["openai_error"] = result.get("error")
+                return None
+            if isinstance(result, list) and len(result) > 0:
+                return result[0].get("generated_text", "").strip()
+            if isinstance(result, dict) and "generated_text" in result:
+                return result.get("generated_text", "").strip()
+            return None
+        except Exception as e:
+            st.session_state["openai_error"] = str(e)
+            print(f"Hugging Face request failed: {e}")
+            return None
+
+    if provider == "openrouter":
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.8
+        }
+
+        attempt = 0
+        max_attempts = 5
+        base_wait = 5
+        
+        while attempt < max_attempts:
+            try:
+                response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30)
+                
+                if response.status_code == 429:
+                    attempt += 1
+                    if attempt < max_attempts:
+                        wait = base_wait * (2 ** (attempt - 1))
+                        st.session_state["openai_error"] = f"Rate limit osiągnięty. Próba {attempt}/{max_attempts} - czekam {wait}s..."
+                        time.sleep(wait)
+                        continue
+                    else:
+                        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę lub zmniejsz liczbę żądań."
+                        return None
+                
+                response.raise_for_status()
+                result = response.json()
+                st.session_state["openai_error"] = None
+                return result["choices"][0]["message"]["content"].strip()
+                
+            except requests.exceptions.HTTPError as e:
+                st.session_state["openai_error"] = str(e)
+                if hasattr(response, 'status_code') and response.status_code == 429:
+                    attempt += 1
+                    if attempt < max_attempts:
+                        wait = base_wait * (2 ** (attempt - 1))
+                        time.sleep(wait)
+                        continue
+                    else:
+                        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
+                        return None
+                print(f"OpenRouter request failed: {e}")
+                return None
+            except Exception as e:
+                st.session_state["openai_error"] = str(e)
+                print(f"OpenRouter request failed: {e}")
+                return None
+        
+        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
+        return None
+
+    return None

@@ -2,6 +2,7 @@ import datetime
 import streamlit as st
 import extra_streamlit_components as stx  
 from src.ui import render_page_header, render_page_footer
+from src.utils import generuj_plan_wycieczki_ai
 
 
 MAPA_ZDJEC = {
@@ -229,5 +230,148 @@ if st.session_state.get("user_name"):
                     f"<div style='padding-top: 10px; font-size: 1rem;'>Wyjazd udany? Podziel się swoimi wrażeniami z pobytu!</div>",
                     unsafe_allow_html=True,
                 )
+
+def generuj_plan_wycieczki(destination, origin, start_date, end_date, trip_type):
+    days = (end_date - start_date).days + 1
+    trip_type = trip_type or "City Break"
+
+    city_acts = {
+        "Gdańsk": {
+            "city break": [
+                ("Spacer po Starym Mieście", "2 godz., zwiedzanie Długiego Targu, Fontanna Neptuna i Bazylika Mariacka"),
+                ("Wizyta w Europejskim Centrum Solidarności", "1.5 godz., wystawy i historia"),
+                ("Rejs po Motławie", "1 godz., trasa wzdłuż nabrzeża")
+            ],
+            "przyroda": [
+                ("Plaża Brzeźno", "3 godz., spacer i odpoczynek nad morzem"),
+                ("Oliwski Park", "2 godz., ogród zoologiczny i katedra"),
+                ("Wyspa Sobieszewska", "cały dzień, rezerwat przyrody i ptaki")
+            ]
+        },
+        "Kraków": {
+            "city break": [
+                ("Rynek Główny", "2 godz., Sukiennice, Wieża Ratuszowa i Kościół Mariacki"),
+                ("Zamek Królewski na Wawelu", "2.5 godz., komnaty i katedra"),
+                ("Kazimierz", "2 godz., żydowskie zabytki i kawiarnie")
+            ],
+            "przyroda": [
+                ("Ojcowski Park Narodowy", "4 godz., zamek, Maczuga Herkulesa i Jaskinia Łokietka"),
+                ("Kopiec Kościuszki", "1.5 godz., panorama Krakowa"),
+                ("Las Wolski", "2 godz., spacer i zwiedzanie Zoo")
+            ]
+        },
+    }
+
+    fallback_city = {
+        "city break": [
+            ("Spacer po centrum", "2 godz., główne atrakcje i lokalne kawiarnie"),
+            ("Muzeum lub galeria", "2 godz., wystawa regionalna"),
+            ("Kolacja w lokalnej restauracji", "1.5 godz.")
+        ],
+        "przyroda": [
+            ("Park lub rezerwat", "3 godz., trasa przyrodnicza"),
+            ("Piknik na łonie natury", "2 godz."),
+            ("Punkt widokowy", "1 godz.")
+        ]
+    }
+
+    typ = trip_type.lower()
+    typ_key = "przyroda" if "przyroda" in typ else "city break"
+    destination_info = city_acts.get(destination, city_acts.get("Gdańsk", {}))
+    activities = destination_info.get(typ_key, fallback_city[typ_key])
+
+    route = f"Dojazd ze {origin} do {destination}."
+    if origin and origin.lower() != destination.lower():
+        route += " Najszybsza opcja to pociąg lub samochód, w zależności od dostępności połączeń."
+        route += " Przykładowo: dworzec główny do centrum miasta w 20-40 minut." if typ_key == "city break" else " Przykładowo: trasa do parku narodowego lub rezerwatu zajmuje około 30-60 minut." 
+    else:
+        route += " Zakładamy wyjazd z Twojej lokalnej okolicy do centrum miasta."
+
+    plan = [f"# Plan wycieczki AI: {destination}",
+            f"**Typ wycieczki:** {trip_type}",
+            f"**Termin:** {start_date} – {end_date} ({days} dni)",
+            f"**Trasa:** {route}",
+            "---",
+            "## Co możesz robić"]
+
+    for i in range(min(days, len(activities))):
+        activity = activities[i]
+        plan.append(f"### Dzień {i+1}: {activity[0]}")
+        plan.append(f"- Szacowany czas: {activity[1]}")
+        plan.append(f"- Polecane godziny: {10 + i*2}:00 – {12 + i*2}:00")
+
+    if days > len(activities):
+        plan.append("### Dodatkowy dzień")
+        plan.append("- Zarezerwuj czas na relaks, kawę w lokalnej kawiarni i krótki spacer.")
+
+    plan.append("---")
+    plan.append("## Dodatkowe wskazówki")
+    plan.append("- Sprawdź lokalne rozkłady jazdy lub bilety online przed wyjazdem.")
+    plan.append("- Weź pod uwagę czas na transfery oraz odpoczynek między atrakcjami.")
+    plan.append("- Jeśli jedziesz autem, zostaw miejsce w samochodzie na pamiątki.")
+
+    return "\n".join(plan)
+
+
+st.markdown("---")
+st.subheader("Zaplanuj swoją wycieczkę z pomocą AI")
+with st.container(border=True):
+    st.markdown(
+        "Skorzystaj z naszego pomocnika AI do planowania wycieczek! Wybierz miejsce, daty oraz rodzaj wycieczki, a nasz asystent AI przygotuje przykładowy plan: co robić, jak dojechać i ile będzie trwać każda atrakcja. Generowanie planu zajmie dłuższą chwilę",
+    )
+
+    c1, c2, c3, c4 = st.columns([1.8, 1.3, 1.3, 1.6])
+    with c1:
+        ai_origin = st.text_input("Skąd jedziesz?", value="Warszawa", placeholder="np. Warszawa", key="ai_origin")
+    with c2:
+        ai_destination = st.selectbox(
+            "Cel podróży",
+            options=lista_miast,
+            index=domyslny_indeks if domyslny_indeks is not None else 0,
+            label_visibility="visible",
+            key="ai_destination"
+        )
+    with c3:
+        ai_start_date = st.date_input("Data od", value=dzis, min_value=dzis, key="ai_start_date")
+    with c4:
+        min_end = ai_start_date + datetime.timedelta(days=1)
+        ai_end_date = st.date_input("Data do", value=ai_start_date + datetime.timedelta(days=2), min_value=min_end, key="ai_end_date")
+
+    ai_type = st.selectbox(
+        "Rodzaj wycieczki",
+        options=["City Break", "Wycieczka na łono przyrody", "Relaks i wellness", "Kulturalna", "Aktywna"],
+        index=0,
+        key="ai_trip_type"
+    )
+
+    if st.button("Zaproponuj plan wycieczki", type="primary"):
+        if ai_start_date >= ai_end_date:
+            st.toast("Data końcowa musi być późniejsza niż data początkowa.", icon="⚠️")
+        else:
+            plan = generuj_plan_wycieczki_ai(ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type)
+            if not plan:
+                if st.session_state.get("openai_api_source"):
+                    st.error(
+                        f"AI jest niedostępne. Pobierono klucz z {st.session_state['openai_api_source']}, ale wystąpił błąd: {st.session_state.get('openai_error')}"
+                    )
+                else:
+                    st.warning(
+                        "AI jest niedostępne. Dodaj prawidłowy klucz OpenAI lub Hugging Face do pliku `.streamlit/secrets.toml` lub ustaw odpowiednią zmienną środowiskową."
+                    )
+                    st.info(
+                        "Przykład formatu pliku `.streamlit/secrets.toml`:\n```\n[openai]\napi_key = \"TWÓJ_OPENAI_API_KEY\"\n```"
+                    )
+                plan = generuj_plan_wycieczki(ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type)
+            else:
+                st.success("Plan wygenerowany przez AI.")
+
+            with st.expander("Pokaż plan wycieczki"):
+                st.markdown(
+                    "<style>"
+                    ".stExpander div[data-testid='stMarkdownContainer'] { font-size: 0.88rem !important; line-height: 1.45 !important; }"
+                    "</style>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(plan)
 
 render_page_footer()

@@ -217,6 +217,7 @@ with search_container:
         osoby_input = st.number_input("Liczba osób", min_value=1, max_value=20, value=st.session_state.search_osoby, key="details_osoby")
     with c5:
         st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
         if st.button("Szukaj", width='stretch', type="primary", key="details_search_btn"):
             czyste_miejsce = miejsce_input if miejsce_input is not None else ""
             
