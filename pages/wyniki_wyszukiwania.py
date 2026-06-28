@@ -460,6 +460,8 @@ if not st.session_state.search_clicked:
 search_container = st.container(border=True)
 with search_container:
     c1, c2, c3, c4, c5 = st.columns([2.5, 1.2, 1.2, 1.2, 1])
+
+    dzis = datetime.date.today()
     
     with c1:
         # pobieramy aktualne miasto z pamięci sesji
@@ -489,9 +491,18 @@ with search_container:
             st.query_params["miejsce"] = ""       # czyścimy parametr z paska URL
             st.rerun()                            # odświeżamy stronę, by od razu pokazać noclegi ze wszystkich miast
     with c2:
-        data_od_input = st.date_input("Data od", value=st.session_state.search_data_od)
+        start_val = st.session_state.search_data_od
+        if start_val < dzis:
+            start_val = dzis
+
+        data_od_input = st.date_input("Data od", value=start_val, min_value=dzis)
     with c3:
-        data_do_input = st.date_input("Data do", value=st.session_state.search_data_do)
+        min_data_do = data_od_input + datetime.timedelta(days=1)
+        end_val = st.session_state.search_data_do
+        if end_val < min_data_do:
+            end_val = min_data_do
+
+        data_do_input = st.date_input("Data do", value=end_val, min_value=min_data_do)
     with c4:
         osoby_input = st.number_input("Liczba osób", min_value=1, max_value=20, value=st.session_state.search_osoby)
     with c5:
@@ -505,24 +516,27 @@ with search_container:
         st.query_params["clicked"] = "True"
         
         if st.button("Szukaj", width='stretch', type="primary"):
-            for klucz in ["cena_min", "cena_max"]:
-                if klucz in st.query_params: del st.query_params[klucz]
-            
-            if "saved_filters" in st.session_state:
-                st.session_state.saved_filters.pop("cena_min", None)
-                st.session_state.saved_filters.pop("cena_max", None)
+            if data_od_input >= data_do_input:
+                st.toast("Data wyjazdu musi być późniejsza niż data przyjazdu!", icon="⚠️")
+            else:            
+                for klucz in ["cena_min", "cena_max"]:
+                    if klucz in st.query_params: del st.query_params[klucz]
+                
+                if "saved_filters" in st.session_state:
+                    st.session_state.saved_filters.pop("cena_min", None)
+                    st.session_state.saved_filters.pop("cena_max", None)
 
-            # nowe wyszukiwanie (inne miasto/daty) unieważnia poprzednią prognozę pogody, więc czyścimy aktywny filtr pogodowy - użytkownik musi go zatwierdzić ponownie
-            st.session_state.aktywna_pogoda = []
-            if "pogoda" in st.query_params: del st.query_params["pogoda"]
+                # nowe wyszukiwanie (inne miasto/daty) unieważnia poprzednią prognozę pogody, więc czyścimy aktywny filtr pogodowy - użytkownik musi go zatwierdzić ponownie
+                st.session_state.aktywna_pogoda = []
+                if "pogoda" in st.query_params: del st.query_params["pogoda"]
 
-            st.session_state.filters_version += 1
-            st.session_state.search_clicked = True
-            st.session_state.search_miejsce = czyste_miejsce
-            st.session_state.search_osoby = osoby_input
-            st.session_state.search_data_od = data_od_input
-            st.session_state.search_data_do = data_do_input
-            st.rerun()
+                st.session_state.filters_version += 1
+                st.session_state.search_clicked = True
+                st.session_state.search_miejsce = czyste_miejsce
+                st.session_state.search_osoby = osoby_input
+                st.session_state.search_data_od = data_od_input
+                st.session_state.search_data_do = data_do_input
+                st.rerun()
 
 # karta filtra pogodowego
 renderuj_panel_pogody(version)

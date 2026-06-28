@@ -81,6 +81,8 @@ search_container = st.container(border=True)
 with search_container:
     c1, c2, c3, c4, c5 = st.columns([2.5, 1.2, 1.2, 1.2, 1])
 
+    dzis = datetime.date.today()
+
     with c1:
         miejsce_input = st.selectbox(
             "Miejsce",
@@ -90,14 +92,25 @@ with search_container:
             label_visibility="visible",
         )
     with c2:
+        start_val = st.session_state.get("search_data_od", dzis)
+        if start_val < dzis:
+            start_val = dzis
         data_od_input = st.date_input(
             "Data od",
-            value=st.session_state.get("search_data_od", datetime.date.today()),
+            value=start_val,
+            min_value=dzis
         )
     with c3:
+        min_data_do = data_od_input + datetime.timedelta(days=1)
+
+        end_val = st.session_state.get("search_data_do", dzis + datetime.timedelta(days=2))
+        if end_val < min_data_do:
+            end_val = min_data_do
+
         data_do_input = st.date_input(
             "Data do",
-            value=st.session_state.get("search_data_do", datetime.date.today() + datetime.timedelta(days=2)),
+            value=end_val,
+            min_value=min_data_do
         )
     with c4:
         osoby_input = st.number_input(
@@ -109,20 +122,23 @@ with search_container:
     with c5:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Szukaj", width='stretch', type="primary"):
-            czyste_miejsce = miejsce_input if miejsce_input is not None else ""
-            st.session_state.search_clicked = True
-            st.session_state.search_miejsce = czyste_miejsce
-            st.session_state.search_osoby = osoby_input
-            st.session_state.search_data_od = data_od_input
-            st.session_state.search_data_do = data_do_input
-            st.query_params["miejsce"] = czyste_miejsce
-            st.query_params["data_od"] = str(data_od_input)
-            st.query_params["data_do"] = str(data_do_input)
-            st.query_params["osoby"] = str(osoby_input)
-            st.query_params["clicked"] = "True"
-            if "id" in st.query_params:
-                del st.query_params["id"]
-            st.switch_page("pages/wyniki_wyszukiwania.py")
+            if data_od_input >= data_do_input:
+                st.toast("Data wyjazdu musi być późniejsza niż data przyjazdu!", icon="⚠️")
+            else:
+                czyste_miejsce = miejsce_input if miejsce_input is not None else ""
+                st.session_state.search_clicked = True
+                st.session_state.search_miejsce = czyste_miejsce
+                st.session_state.search_osoby = osoby_input
+                st.session_state.search_data_od = data_od_input
+                st.session_state.search_data_do = data_do_input
+                st.query_params["miejsce"] = czyste_miejsce
+                st.query_params["data_od"] = str(data_od_input)
+                st.query_params["data_do"] = str(data_do_input)
+                st.query_params["osoby"] = str(osoby_input)
+                st.query_params["clicked"] = "True"
+                if "id" in st.query_params:
+                    del st.query_params["id"]
+                st.switch_page("pages/wyniki_wyszukiwania.py")
 
 st.markdown("---")
 

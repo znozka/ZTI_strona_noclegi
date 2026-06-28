@@ -365,3 +365,4 @@ if przycisk_podsumuj or st.session_state.get("pokaz_podsumowanie", False):
         st.switch_page("pages/strona_noclegu.py")
 
 
+render_page_footer()
