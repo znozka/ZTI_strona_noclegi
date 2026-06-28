@@ -29,6 +29,26 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+st.markdown(
+    """
+    <style>
+        div[data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
+        
+        header[data-testid="stHeader"] button {
+            display: none !important;
+        }
+        
+        section[data-testid="stSidebar"] {
+            display: none !important;
+            width: 0px !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 conn = st.connection("azure_sql", type="sql")
 
 st.title("Bramka Płatnicza")
@@ -158,7 +178,7 @@ if submit_button:
             st.session_state.rezerwacja_kliknieta = False
             st.session_state.pokaz_podsumowanie = False
             
-            time.sleep(10)
+            time.sleep(7)
             st.switch_page("app.py")
             
         except Exception as e:
