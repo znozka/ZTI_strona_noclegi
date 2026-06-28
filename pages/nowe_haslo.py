@@ -66,18 +66,18 @@ st.markdown(
     """
     <style>
         .custom-footer {
-            position: static !important;
-            left: 0em !important;
-            right: 0em !important;
-            bottom: auto !important;
-            z-index: 1 !important;
-            margin: 0 auto !important;
-            width: 100% !important;
+            position: fixed !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            width: 100vw !important;
             border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
         }
 
         .block-container {
-            padding-bottom: 24px !important;
+            padding-bottom: 110px !important;
         }
     </style>
     """,

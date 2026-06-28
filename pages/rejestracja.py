@@ -29,7 +29,7 @@ with cent_co:
     
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.button("Zarejestruj się i zaloguj", width='stretch'):
+    if st.button("Zarejestruj się i zaloguj", width='stretch', type="primary"):
         if not imie or not nazwisko or not nowy_email or not nowe_haslo or not powtórz_haslo:
             st.error("Wszystkie pola są wymagane!")
         elif len(nowe_haslo) < 8:
@@ -66,18 +66,18 @@ st.markdown(
     """
     <style>
         .custom-footer {
-            position: static !important;
-            left: 0em !important;
-            right: 0em !important;
-            bottom: auto !important;
-            z-index: 1 !important;
-            margin: 0 auto !important;
-            width: 100% !important;
+            position: fixed !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            width: 100vw !important;
             border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
         }
 
         .block-container {
-            padding-bottom: 24px !important;
+            padding-bottom: 110px !important;
         }
     </style>
     """,

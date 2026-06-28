@@ -28,6 +28,53 @@ footer {
     transition: opacity 0.2s;
 }
 
+/* --- WYJĄTEK 1: Przycisk "Załóż konto" (Oryginalny jasnoszary styl Streamlit z obwódką) --- */
+.stButton > button[kind="secondary"] {
+    background-color: #FFFFFF !important;  /* Białe tło */
+    color: #31333F !important;             /* Ciemnoszary tekst */
+    border: 1px solid rgba(49, 51, 63, 0.2) !important; /* Jasnoszara obwódka */
+}
+
+.stButton > button[kind="secondary"]:hover {
+    border-color: var(--main-accent) !important; /* Obwódka zmienia kolor na Twój żółty przy najechaniu */
+    color: var(--main-accent) !important;
+    opacity: 1 !important;
+}
+
+/* --- TARCZA DLA LOGO: Wymuszamy absolutną przezroczystość (musi być poniżej WYJĄTKU 1) --- */
+.st-key-logo_btn button,
+.st-key-logo_btn button[kind="secondary"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: transparent !important;
+}
+
+.st-key-logo_btn button:hover,
+.st-key-logo_btn button[kind="secondary"]:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    color: transparent !important;
+}
+
+/* --- WYJĄTEK 2: Przycisk formularza "Zaloguj się" (Twój żółty styl) --- */
+[data-testid="stFormSubmitButton"] button {
+    background-color: var(--main-accent) !important;
+    color: var(--page-bg) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1rem !important;
+    transition: opacity 0.2s !important;
+    width: 100% !important;
+}
+
+[data-testid="stFormSubmitButton"] button:hover {
+    opacity: 0.9 !important;
+    color: var(--page-bg) !important;
+}
+
 .stButton>button:hover {
     opacity: 0.9;
     color: var(--page-bg) !important;
@@ -157,8 +204,9 @@ div[class*="st-key-title_btn_"] button * {
     line-height: 1.2 !important;
 }
 
-/* Resetowanie stylów kontenera przycisku */
-div[class*="st-key-title_btn_"] button {
+/* Resetowanie stylów kontenera przycisku (z tarczą dla secondary) */
+div[class*="st-key-title_btn_"] button,
+div[class*="st-key-title_btn_"] button[kind="secondary"] {
     background: transparent !important;
     background-color: transparent !important;
     border: none !important;
@@ -169,6 +217,18 @@ div[class*="st-key-title_btn_"] button {
     justify-content: flex-start !important;
     display: inline-block !important;
     width: 100% !important;
+}
+
+/* Efekt najechania myszką (żółty kolor dla przycisku i całego tekstu w środku + brak obwódki) */
+div[class*="st-key-title_btn_"] button:hover,
+div[class*="st-key-title_btn_"] button[kind="secondary"]:hover,
+div[class*="st-key-title_btn_"] button:hover *,
+div[class*="st-key-title_btn_"] button[kind="secondary"]:hover * {
+    color: var(--main-accent) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    text-decoration: none !important;
 }
 
 /* Efekt najechania myszką (żółty kolor dla przycisku i całego tekstu w środku) */

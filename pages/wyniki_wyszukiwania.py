@@ -209,7 +209,7 @@ def renderuj_panel_pogody(version):
 
             col_left, col_center, col_right = st.columns([3, 1, 3])
             with col_center:
-                zastosuj_pogode = st.button("Zastosuj filtr pogodowy", type="secondary", use_container_width=True)
+                zastosuj_pogode = st.button("Zastosuj filtr pogodowy", type="primary", use_container_width=True)
 
             if zastosuj_pogode:
                 st.session_state.aktywna_pogoda = [etykieta_do_klucza[e] for e in wybrane_etykiety_robocze]
@@ -926,7 +926,7 @@ with panel_wynikow:
                             </div>
                             """, unsafe_allow_html=True)
                             
-                            kliknieto_przycisk = st.button("Szczegóły", key=f"btn_{row['id_noclegu']}", width='stretch')
+                            kliknieto_przycisk = st.button("Szczegóły", key=f"btn_{row['id_noclegu']}", width='stretch', type="primary")
                     
                     if kliknieto_tytul or kliknieto_przycisk:
                         st.session_state.selected_nocleg_id = row['id_noclegu']
