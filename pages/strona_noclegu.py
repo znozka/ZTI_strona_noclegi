@@ -9,6 +9,7 @@ from sqlalchemy import text
 from streamlit_folium import folium_static
 from src.ui import render_page_header, render_page_footer
 from src.utils import wyswietl_zdjecie
+from src.map_utils import build_map_query
 
 # ukrycie ostrzeżeń w konsoli
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -279,22 +280,9 @@ else:
                     o.ocena DESC
             """
             df_opinie = conn.query(query_opinie, params={"id": selected_id}, ttl=0)
-            
+
             search_city = st.session_state.get("search_miejsce", "").strip()
-            if search_city:
-                query_map = """
-                    SELECT id_noclegu, nazwa, lokalizacja_miasto, lokalizacja_adres, szerokosc_geo, dlugosc_geo
-                    FROM noclegi
-                    WHERE lokalizacja_miasto LIKE :miasto
-                """
-                params_map = {"miasto": f"%{search_city}%"}
-            else:
-                query_map = """
-                    SELECT id_noclegu, nazwa, lokalizacja_miasto, lokalizacja_adres, szerokosc_geo, dlugosc_geo
-                    FROM noclegi
-                    WHERE id_noclegu = :id
-                """
-                params_map = {"id": selected_id}
+            query_map, params_map = build_map_query(search_city, selected_id)
 
             df_map_hotels = conn.query(query_map, params=params_map, ttl=0)
             detail_map = build_detail_map(selected_id, nocleg["szerokosc_geo"], nocleg["dlugosc_geo"], df_map_hotels)

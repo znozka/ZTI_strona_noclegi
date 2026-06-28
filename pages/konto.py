@@ -901,7 +901,11 @@ with tab_travels:
                 # --- PRZYPADEK 1: OPINIA JUŻ ISTNIEJE ---
                 if ma_opinie:
                     st.markdown(f"**Ocena:** {'⭐' * int(opinia_row['ocena'])}")
-                    st.markdown(f"**Komentarz:** {opinia_row['komentarz'] or '*(brak)*'}")
+                    komentarz = opinia_row['komentarz']
+                    if pd.isna(komentarz):
+                        komentarz = ""
+
+                    st.markdown(f"**Komentarz:** {komentarz}")
                     
                     col_edit, col_del, col_empty = st.columns([1,1,6])
 
@@ -1074,6 +1078,10 @@ with tab_owner:
         st.subheader("Zarządzaj swoimi obiektami")
         
         opinie_all = get_property_reviews(user_id, conn)
+        if opinie_all is not None and not opinie_all.empty:
+            # zamienia wszystkie wartości NaN w kolumnie na pusty ciąg znaków
+            opinie_all['odpowiedz_wlasciciela'] = opinie_all['odpowiedz_wlasciciela'].fillna("")
+            opinie_all['komentarz'] = opinie_all['komentarz'].fillna("")
         
         for _, row in moje_obiekty.iterrows():
             with st.expander(f"{row['nazwa']} ({row['lokalizacja_miasto']})"):

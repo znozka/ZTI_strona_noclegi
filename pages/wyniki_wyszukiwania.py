@@ -857,6 +857,7 @@ with panel_wynikow:
                             st.markdown("<div class='surface-block' style='height: 160px;'></div>", unsafe_allow_html=True)
                             
                     with col_detale:
+                        # Górna część: tytuł + ocena
                         c_title, c_rating = st.columns([2.8, 1.2])
                         with c_title:
                             kliknieto_tytul = st.button(row['nazwa'], key=f"title_btn_{row['id_noclegu']}")
@@ -883,50 +884,44 @@ with panel_wynikow:
                                 </div>
                             """, unsafe_allow_html=True)
                         
+                        # Opis + cena/przycisk w jednym bloku HTML – daje pełną kontrolę nad layoutem
                         opis_skrocony = row['opis'] if row['opis'] else "Brak opisu obiektu."
                         if len(opis_skrocony) > 180:
-                            # bierzemy maksymalny wycinek tekstu
                             wycinek = opis_skrocony[:200]
-                            
-                            # szukamy ostatniej spacji w tym wycinku, aby nie rozbić wyrazu
                             ostatnia_spacja = wycinek.rfind(' ')
                             if ostatnia_spacja != -1:
                                 wycinek = wycinek[:ostatnia_spacja]
-                            
-                            # usuwamy z końca spacje, przecinki i kropki, aby nie było ",..." lub "...."
                             opis_skrocony = wycinek.rstrip('.,; ') + "..."
 
-                        st.markdown(
-                            f"""
-                            <div style="
-                                width: 40rem;
-                                overflow-wrap: break-word;
-                                word-wrap: break-word;
-                            ">
-                                {opis_skrocony}
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                        c_space, c_price_btn = st.columns([3, 1])
+                        cena_za_noc = row['cena_za_noc']
+                        liczba_nocy = (st.session_state.search_data_do - st.session_state.search_data_od).days
+                        liczba_nocy = max(1, liczba_nocy)
+                        cena_calkowita = int(cena_za_noc) * liczba_nocy
 
-                        with c_price_btn:
-                            cena_za_noc = row['cena_za_noc']
-                            liczba_nocy = (st.session_state.search_data_do - st.session_state.search_data_od).days
-                            
-                            # zabezpieczenie (minimum 1 noc)
-                            liczba_nocy = max(1, liczba_nocy) 
-                            
-                            cena_calkowita = int(cena_za_noc) * liczba_nocy
-                            
+                        st.markdown(f"""
+                        <div style='overflow-wrap:break-word; word-break:break-word; font-size:0.92rem; line-height:1.5;'>
+                            {opis_skrocony}
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        # Wypełniacz - rozpycha przestrzeń w górę
+                        st.markdown("<div style='min-height: 5rem;'></div>", unsafe_allow_html=True)
+
+                        _, c_btn = st.columns([3, 1])
+                        with c_btn:
                             st.markdown(f"""
-                            <div style='text-align: right; line-height: 1.1; margin-bottom: 10px;'>
-                                <span style='font-size: 2rem; font-weight: bold;'>{cena_calkowita} zł</span><br>
-                                <span style='font-size: 0.9rem; color: #767676;'>{int(cena_za_noc)} za noc</span>
+                            <div style='text-align:right; line-height:1.1; margin-bottom:8px;'>
+                                <span style='font-size:2rem; font-weight:bold;'>{cena_calkowita} zł</span><br>
+                                <span style='font-size:0.9rem; color:#767676;'>{int(cena_za_noc)} zł za noc</span>
                             </div>
                             """, unsafe_allow_html=True)
                             
-                            kliknieto_przycisk = st.button("Szczegóły", key=f"btn_{row['id_noclegu']}", width='stretch', type="primary")
+                            kliknieto_przycisk = st.button(
+                                "Szczegóły",
+                                key=f"btn_{row['id_noclegu']}",
+                                use_container_width=True,
+                                type="primary"
+                            )
                     
                     if kliknieto_tytul or kliknieto_przycisk:
                         st.session_state.selected_nocleg_id = row['id_noclegu']
