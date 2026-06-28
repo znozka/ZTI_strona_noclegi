@@ -382,7 +382,7 @@ st.subheader("Zaplanuj swoją wycieczkę z pomocą AI")
 with st.container(border=True):
     st.markdown(
         "Skorzystaj z naszego pomocnika AI do planowania wycieczek! Wybierz miejsce, daty oraz rodzaj podróży, a nasz asystent AI przygotuje przykładowy plan: co robić, jak dojechać i ile będzie trwać każda atrakcja." \
-        "<br>**Generowanie planu zajmie dłuższą chwilę.**", unsafe_allow_html=True,
+        "<br>**Generowanie planu może zająć chwilę.**", unsafe_allow_html=True,
     )
 
     c1, c2, c3, c4 = st.columns([1.8, 1.3, 1.3, 1.6])
@@ -409,34 +409,34 @@ with st.container(border=True):
         key="ai_trip_type"
     )
 
-    if st.button("Zaproponuj plan wycieczki", type="primary"):
-        if ai_start_date >= ai_end_date:
-            st.toast("Data końcowa musi być późniejsza niż data początkowa.", icon="⚠️")
-        else:
-            plan = generuj_plan_wycieczki_ai(ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type)
-            if not plan:
-                if st.session_state.get("openai_api_source"):
-                    st.error(
-                        f"AI jest niedostępne. Pobierono klucz z {st.session_state['openai_api_source']}, ale wystąpił błąd: {st.session_state.get('openai_error')}"
-                    )
-                else:
-                    st.warning(
-                        "AI jest niedostępne. Dodaj prawidłowy klucz OpenAI lub Hugging Face do pliku `.streamlit/secrets.toml`."
-                    )
-                    st.info(
-                        "Przykład formatu pliku `.streamlit/secrets.toml`:\n```\n[openai]\napi_key = \"TWÓJ_OPENAI_API_KEY\"\n```"
-                    )
-                plan = generuj_plan_wycieczki(ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type)
-            else:
-                st.success("Plan wygenerowany przez AI.")
+    col_left, col_center, col_right = st.columns([2, 1, 2])
 
-            with st.expander("Pokaż plan wycieczki"):
-                st.markdown(
-                    "<style>"
-                    ".stExpander div[data-testid='stMarkdownContainer'] { font-size: 0.88rem !important; line-height: 1.45 !important; }"
-                    "</style>",
-                    unsafe_allow_html=True,
+    with col_center:
+        if st.button("Zaproponuj plan wycieczki", type="primary", use_container_width=True):
+            if ai_start_date >= ai_end_date:
+                st.toast("Data końcowa musi być późniejsza niż data początkowa.", icon="⚠️")
+            else:
+                plan = generuj_plan_wycieczki_ai(
+                    ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type
                 )
-                st.markdown(plan)
+
+                if not plan:
+                    if st.session_state.get("openai_api_source"):
+                        st.error(
+                            f"AI niedostępne. Klucz z {st.session_state['openai_api_source']}, "
+                            f"błąd: {st.session_state.get('openai_error')}"
+                        )
+                    else:
+                        st.warning("AI niedostępne. Dodaj klucz API do `.streamlit/secrets.toml`.")
+                        st.info("Przykład:\n```\n[openai]\napi_key = \"TWÓJ_KLUCZ\"\n```")
+
+                    # Fallback bez AI
+                    plan = generuj_plan_wycieczki(
+                        ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type
+                    )
+                    st.markdown(plan)
+                else:
+                    st.success("Plan wygenerowany przez AI.")
+                    # Tekst już wyrenderowany przez funkcję - nie trzeba st.markdown(plan)
 
 render_page_footer()

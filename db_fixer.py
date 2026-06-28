@@ -13,7 +13,7 @@ CONNECTION_STRING = (
 
 PRZYPISANIE_OPISOW = {
     "HOTEL": [
-        "Hotel budżetowy – idealny na krótki przystanek w podróży. Oferuje niezbędne minimum w bardzo atrakcyjnej cenie. To świetny wybór dla osób, które większość czasu spędzają na zwiedzaniu.",
+        "Hotel budżetowy - idealny na krótki przystanek w podróży. Oferuje niezbędne minimum w bardzo atrakcyjnej cenie. To świetny wybór dla osób, które większość czasu spędzają na zwiedzaniu.",
         "Ekonomiczny hotel z podstawowym wyposażeniem dla każdego. Pokoje są czyste i funkcjonalne, zapewniając spokojny sen. Lokalizacja pozwala na łatwy dostęp do głównych tras komunikacyjnych.",
         "Komfortowy hotel w przystępnej cenie, blisko centrum. Obiekt wyróżnia się bardzo dobrą obsługą oraz wygodnymi łóżkami. Goście docenią szybki dojazd do najważniejszych punktów miasta.",
         "Stylowy obiekt hotelowy zapewniający dobry standard wypoczynku. Wnętrza zostały zaprojektowane z myślą o funkcjonalności i estetyce. Idealne miejsce dla osób ceniących dobrą relację jakości do ceny.",
@@ -22,7 +22,7 @@ PRZYPISANIE_OPISOW = {
         "Wysokiej klasy hotel z profesjonalną obsługą i komfortem. Przestronne wnętrza zostały wykończone z dbałością o każdy szczegół. Do dyspozycji gości pozostaje strefa fitness oraz wyśmienita restauracja.",
         "Luksusowy obiekt z pełną gamą usług dla wymagających. Oferuje dostęp do całodobowej recepcji oraz usług concierge. To doskonałe miejsce dla osób szukających wytchnienia w centrum wydarzeń.",
         "Ekskluzywny hotel ze strefą SPA i widokiem na miasto. Goście mogą korzystać z sauny oraz basenu po męczącym dniu. Wysoki standard usług gwarantuje pełne zadowolenie nawet najbardziej wymagających osób.",
-        "Prestiżowy hotel premium – kwintesencja luksusu i wygody. Indywidualne podejście do gościa sprawia, że każdy pobyt staje się wyjątkowy. Obiekt zapewnia prywatność oraz dostęp do najnowocześniejszych udogodnień."
+        "Prestiżowy hotel premium - kwintesencja luksusu i wygody. Indywidualne podejście do gościa sprawia, że każdy pobyt staje się wyjątkowy. Obiekt zapewnia prywatność oraz dostęp do najnowocześniejszych udogodnień."
     ],
     "APARTAMENT": [
         "Prosta kawalerka dla osób szukających noclegu w niskiej cenie. Mieszkanie posiada podstawowy aneks kuchenny oraz wygodne miejsce do spania. Idealne rozwiązanie na szybki wyjazd w pojedynkę.",
@@ -46,7 +46,7 @@ PRZYPISANIE_OPISOW = {
         "Butikowy luksus, gdzie każdy detal ma swoje znaczenie. Wyselekcjonowane meble i dodatki tworzą spójną całość. Goście mogą liczyć na dyskrecję oraz obsługę na najwyższym poziomie.",
         "Ekskluzywna przestrzeń butikowa z indywidualnym stylem. Obiekt oferuje kameralną strefę relaksu oraz wyśmienite śniadania. To idealny wybór dla osób szukających luksusu w mniejszym wydaniu.",
         "Miejsce dla wymagających gości szukających inspiracji. Unikalny koncept hotelu sprawia, że każdy powrót jest wyjątkowy. Cisza i spokój są tutaj gwarantowane przez cały pobyt.",
-        "Prestiżowy butik – unikalny komfort na najwyższym poziomie. Połączenie wyszukanej estetyki z dbałością o potrzeby gości. To miejsce, do którego chce się wracać przy każdej okazji."
+        "Prestiżowy butik - unikalny komfort na najwyższym poziomie. Połączenie wyszukanej estetyki z dbałością o potrzeby gości. To miejsce, do którego chce się wracać przy każdej okazji."
     ],
     "WYNAJEM WAKACYJNY": [
         "Prosty dom letniskowy blisko natury na każdą kieszeń. Posiada bezpośredni dostęp do lasu i terenów spacerowych. Idealne miejsce dla osób chcących uciec od zgiełku miasta.",
@@ -58,7 +58,7 @@ PRZYPISANIE_OPISOW = {
         "Wysokiej klasy dom wakacyjny w zacisznej okolicy. Nowoczesne wykończenie łączy się z naturalnymi materiałami. To idealna propozycja dla osób ceniących wysoki standard wypoczynku.",
         "Wakacyjna rezydencja z pełnym dostępem do infrastruktury. Obiekt posiada prywatny dostęp do plaży oraz sprzęt rekreacyjny. Zapewniamy pełen komfort oraz swobodę, jak we własnym domu.",
         "Luksusowy dom letniskowy z prywatną strefą relaksu. Goście mogą korzystać z jacuzzi oraz przestronnej sauny. To najwyższy poziom wypoczynku w otoczeniu pięknej przyrody.",
-        "Ekskluzywna willa wakacyjna – wypoczynek premium. Wyjątkowy design oraz najwyższa jakość wykończenia zachwycą każdego gościa. To miejsce stworzone dla osób szukających spokoju w wielkim stylu."
+        "Ekskluzywna willa wakacyjna - wypoczynek premium. Wyjątkowy design oraz najwyższa jakość wykończenia zachwycą każdego gościa. To miejsce stworzone dla osób szukających spokoju w wielkim stylu."
     ],
     "B&B": [
         "Proste miejsce na nocleg z dostępem do podstawowego śniadania. Pokoje są czyste i utrzymane w minimalistycznym stylu. Idealny przystanek dla osób w trasie, które cenią funkcjonalność.",
@@ -70,7 +70,7 @@ PRZYPISANIE_OPISOW = {
         "Pensjonat o podwyższonym standardzie z dużą wygodą. Wnętrza są urządzone z dbałością o estetykę i komfortowy sen. To propozycja dla osób szukających czegoś więcej niż standardowy nocleg.",
         "Ekskluzywne B&B łączące domowy klimat z luksusem. Wysokiej jakości pościel oraz wyśmienita kuchnia to nasze znaki rozpoznawcze. Zapewniamy obsługę na najwyższym poziomie.",
         "Wysokiej klasy pensjonat dla najbardziej wymagających. Każdy pokój posiada własną łazienkę oraz nowoczesne wyposażenie. To miejsce, gdzie elegancja spotyka się z domowym ciepłem.",
-        "Prestiżowe B&B – połączenie elegancji i domowego ciepła. Wyjątkowa lokalizacja w samym sercu miasta ułatwia zwiedzanie. Śniadania to prawdziwa uczta dla podniebienia."
+        "Prestiżowe B&B - połączenie elegancji i domowego ciepła. Wyjątkowa lokalizacja w samym sercu miasta ułatwia zwiedzanie. Śniadania to prawdziwa uczta dla podniebienia."
     ]
 }
 

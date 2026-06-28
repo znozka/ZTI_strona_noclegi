@@ -1,4 +1,5 @@
 import requests
+import json
 import time
 import os
 from io import BytesIO
@@ -364,157 +365,145 @@ def generuj_plan_wycieczki_ai(destination, origin, start_date, end_date, trip_ty
         "Nie używaj kodu ani formatowania JSON, tylko zwykły tekst."
     )
 
-    if provider == "openai":
+    # ------------------------------------------------------------------ #
+    #  OpenAI  &  OpenRouter  - streaming SSE                             #
+    # ------------------------------------------------------------------ #
+    if provider in ("openai", "openrouter"):
+        url = (
+            "https://api.openai.com/v1/chat/completions"
+            if provider == "openai"
+            else "https://openrouter.ai/api/v1/chat/completions"
+        )
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-
         payload = {
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user",   "content": user_prompt},
             ],
             "max_tokens": 500,
-            "temperature": 0.8
+            "temperature": 0.8,
+            "stream": True,
         }
 
         attempt = 0
-        max_attempts = 5
-        base_wait = 5  # 5 sekund na początek, będzie rosnąć exponentially
-        
+        max_attempts = 3
+        base_wait = 3
+
         while attempt < max_attempts:
             try:
-                response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=20)
-                
-                if response.status_code == 429:
-                    attempt += 1
-                    if attempt < max_attempts:
-                        wait = base_wait * (2 ** (attempt - 1))
-                        st.session_state["openai_error"] = f"Rate limit osiągnięty. Próba {attempt}/{max_attempts} - czekam {wait}s..."
-                        time.sleep(wait)
-                        continue
-                    else:
-                        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę lub zmniejsz liczbę żądań."
-                        return None
-                
-                response.raise_for_status()
-                result = response.json()
-                st.session_state["openai_error"] = None
-                return result["choices"][0]["message"]["content"].strip()
-                
-            except requests.exceptions.HTTPError as e:
-                st.session_state["openai_error"] = str(e)
-                if hasattr(response, 'status_code') and response.status_code == 429:
-                    attempt += 1
-                    if attempt < max_attempts:
-                        wait = base_wait * (2 ** (attempt - 1))
-                        time.sleep(wait)
-                        continue
-                    else:
+                with requests.post(url, headers=headers, json=payload, stream=True, timeout=30) as response:
+
+                    # Rate limit - jeden retry z krótkim czekaniem
+                    if response.status_code == 429:
+                        attempt += 1
+                        if attempt < max_attempts:
+                            wait = base_wait * (2 ** (attempt - 1))
+                            st.toast(f"Rate limit - czekam {wait}s i próbuję ponownie ({attempt}/{max_attempts})...")
+                            time.sleep(wait)
+                            continue
                         st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
                         return None
-                print(f"OpenAI request failed: {e}")
+
+                    response.raise_for_status()
+
+                    result = ""
+                    placeholder = st.empty()
+
+                    for raw_line in response.iter_lines():
+                        if not raw_line:
+                            continue
+                        # SSE: każda linia zaczyna się od "data: "
+                        if isinstance(raw_line, bytes):
+                            raw_line = raw_line.decode("utf-8")
+                        if raw_line.strip() == "data: [DONE]":
+                            break
+                        if not raw_line.startswith("data: "):
+                            continue
+
+                        try:
+                            chunk = json.loads(raw_line[6:])
+                            delta = chunk["choices"][0]["delta"].get("content", "")
+                            if delta:
+                                result += delta
+                                # Migający kursor daje efekt pisania na żywo
+                                placeholder.markdown(result + "▌")
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            continue
+
+                    # Usuń kursor po zakończeniu
+                    placeholder.markdown(result)
+                    st.session_state["openai_error"] = None
+                    return result
+
+            except requests.exceptions.HTTPError as e:
+                st.session_state["openai_error"] = str(e)
+                # 429 może też trafić tutaj przez raise_for_status
+                if hasattr(response, "status_code") and response.status_code == 429:
+                    attempt += 1
+                    if attempt < max_attempts:
+                        wait = base_wait * (2 ** (attempt - 1))
+                        time.sleep(wait)
+                        continue
+                    st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
                 return None
+
             except Exception as e:
                 st.session_state["openai_error"] = str(e)
-                print(f"OpenAI request failed: {e}")
                 return None
-        
+
         st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
         return None
 
+    # ------------------------------------------------------------------ #
+    #  Hugging Face - brak oficjalnego SSE, zwykły request                #
+    #  (większość modeli HF Inference API nie wspiera streamingu)         #
+    # ------------------------------------------------------------------ #
     if provider == "huggingface":
-        model_name = model
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         payload = {
             "inputs": f"{system_prompt}\n{user_prompt}",
             "parameters": {
                 "max_new_tokens": 500,
                 "temperature": 0.8,
-                "return_full_text": False
-            }
+                "return_full_text": False,
+            },
         }
 
         try:
-            response = requests.post(f"https://api-inference.huggingface.co/models/{model_name}", headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
-            result = response.json()
-            if isinstance(result, dict) and result.get("error"):
-                st.session_state["openai_error"] = result.get("error")
-                return None
-            if isinstance(result, list) and len(result) > 0:
-                return result[0].get("generated_text", "").strip()
-            if isinstance(result, dict) and "generated_text" in result:
-                return result.get("generated_text", "").strip()
-            return None
-        except Exception as e:
-            st.session_state["openai_error"] = str(e)
-            print(f"Hugging Face request failed: {e}")
-            return None
-
-    if provider == "openrouter":
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            "max_tokens": 500,
-            "temperature": 0.8
-        }
-
-        attempt = 0
-        max_attempts = 5
-        base_wait = 5
-        
-        while attempt < max_attempts:
-            try:
-                response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30)
-                
-                if response.status_code == 429:
-                    attempt += 1
-                    if attempt < max_attempts:
-                        wait = base_wait * (2 ** (attempt - 1))
-                        st.session_state["openai_error"] = f"Rate limit osiągnięty. Próba {attempt}/{max_attempts} - czekam {wait}s..."
-                        time.sleep(wait)
-                        continue
-                    else:
-                        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę lub zmniejsz liczbę żądań."
-                        return None
-                
+            # Spinner zamiast ślepego czekania - HF bywa wolny przy zimnym starcie
+            with st.spinner("Generuję plan wycieczki (Hugging Face)..."):
+                response = requests.post(
+                    f"https://api-inference.huggingface.co/models/{model}",
+                    headers=headers,
+                    json=payload,
+                    timeout=60,   # HF cold-start potrafi trwać 30-40s
+                )
                 response.raise_for_status()
                 result = response.json()
-                st.session_state["openai_error"] = None
-                return result["choices"][0]["message"]["content"].strip()
-                
-            except requests.exceptions.HTTPError as e:
-                st.session_state["openai_error"] = str(e)
-                if hasattr(response, 'status_code') and response.status_code == 429:
-                    attempt += 1
-                    if attempt < max_attempts:
-                        wait = base_wait * (2 ** (attempt - 1))
-                        time.sleep(wait)
-                        continue
-                    else:
-                        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
-                        return None
-                print(f"OpenRouter request failed: {e}")
+
+            if isinstance(result, dict) and result.get("error"):
+                st.session_state["openai_error"] = result["error"]
                 return None
-            except Exception as e:
-                st.session_state["openai_error"] = str(e)
-                print(f"OpenRouter request failed: {e}")
-                return None
-        
-        st.session_state["openai_error"] = "429 Too Many Requests - spróbuj ponownie za chwilę."
-        return None
+
+            text = None
+            if isinstance(result, list) and result:
+                text = result[0].get("generated_text", "").strip()
+            elif isinstance(result, dict):
+                text = result.get("generated_text", "").strip()
+
+            if text:
+                st.markdown(text)
+            return text
+
+        except Exception as e:
+            st.session_state["openai_error"] = str(e)
+            return None
 
     return None
