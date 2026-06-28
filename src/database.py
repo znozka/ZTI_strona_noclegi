@@ -749,9 +749,14 @@ def delete_opinion(id_opinii, conn):
     Usuwa opinię z bazy danych na podstawie jej ID.
     """
     try:
-        query = text("DELETE FROM opinie WHERE id_opinii = :id")
+        clean_id = int(id_opinii)
         with conn.session as s:
-            s.execute(query, {"id": id_opinii})
+            # Usuń najpierw odpowiedzi właściciela (jeśli istnieją)
+            s.execute(text("DELETE FROM odpowiedzi_wlasciciela WHERE id_opinii = :id"), {"id": clean_id})
+            # Usuń historię edycji opinii (jeśli istnieje)
+            s.execute(text("DELETE FROM historia_opinii WHERE id_opinii = :id"), {"id": clean_id})
+            # Na końcu usuń samą opinię
+            s.execute(text("DELETE FROM opinie WHERE id_opinii = :id"), {"id": clean_id})
             s.commit()
         return True, "Opinia została usunięta."
     except Exception as e:
