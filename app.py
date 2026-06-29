@@ -412,31 +412,33 @@ with st.container(border=True):
     col_left, col_center, col_right = st.columns([2, 1, 2])
 
     with col_center:
-        if st.button("Zaproponuj plan wycieczki", type="primary", use_container_width=True):
-            if ai_start_date >= ai_end_date:
-                st.toast("Data końcowa musi być późniejsza niż data początkowa.", icon="⚠️")
-            else:
-                plan = generuj_plan_wycieczki_ai(
+        button_clicked = st.button("Zaproponuj plan wycieczki", type="primary", use_container_width=True)
+
+    # opis poza kolumnami
+    if button_clicked:
+        if ai_start_date >= ai_end_date:
+            st.toast("Data końcowa musi być późniejsza niż data początkowa.", icon="⚠️")
+        else:
+            plan = generuj_plan_wycieczki_ai(
+                ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type
+            )
+
+            if not plan:
+                if st.session_state.get("openai_api_source"):
+                    st.error(
+                        f"AI niedostępne. Klucz z {st.session_state['openai_api_source']}, "
+                        f"błąd: {st.session_state.get('openai_error')}"
+                    )
+                else:
+                    st.warning("AI niedostępne. Dodaj klucz API do `.streamlit/secrets.toml`.")
+                    st.info("Przykład:\n```\n[openai]\napi_key = \"TWÓJ_KLUCZ\"\n```")
+
+                plan = generuj_plan_wycieczki(
                     ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type
                 )
-
-                if not plan:
-                    if st.session_state.get("openai_api_source"):
-                        st.error(
-                            f"AI niedostępne. Klucz z {st.session_state['openai_api_source']}, "
-                            f"błąd: {st.session_state.get('openai_error')}"
-                        )
-                    else:
-                        st.warning("AI niedostępne. Dodaj klucz API do `.streamlit/secrets.toml`.")
-                        st.info("Przykład:\n```\n[openai]\napi_key = \"TWÓJ_KLUCZ\"\n```")
-
-                    # Fallback bez AI
-                    plan = generuj_plan_wycieczki(
-                        ai_destination, ai_origin, ai_start_date, ai_end_date, ai_type
-                    )
-                    st.markdown(plan)
-                else:
-                    st.success("Plan wygenerowany przez AI.")
-                    # Tekst już wyrenderowany przez funkcję - nie trzeba st.markdown(plan)
+                st.markdown(plan)
+            else:
+                st.success("Plan wygenerowany przez AI.")
+                st.markdown(plan)  # jeśli funkcja nie renderuje sama
 
 render_page_footer()
